@@ -7,6 +7,7 @@ export const metadata: Metadata = {
   description: 'Arkadaşlarınla gerçek zamanlı sosyal parti oyunları oyna. Vampir Köylü ve daha fazlası!',
   keywords: ['parti oyunu', 'vampir köylü', 'online oyun', 'sosyal oyun', 'mafia'],
   authors: [{ name: 'PartyVerse Team' }],
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'https://partyverse.vercel.app'),
   icons: {
     icon: '/favicon.ico',
     apple: '/apple-touch-icon.png',

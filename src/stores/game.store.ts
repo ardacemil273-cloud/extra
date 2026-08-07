@@ -68,7 +68,7 @@ export const useGameStore = create<GameStore>((set) => ({
   setGameState: (state) => set({ gameState: state }),
   updateGameState: (partial) => set((s) => ({ gameState: s.gameState ? { ...s.gameState, ...partial } : null })),
   setMyRole: (role, team) => set({ myRole: role, myTeam: team }),
-  setMyTurn: (active, targets = [], role = null, duration = 30) =>
+  setMyTurn: (active, targets = [], role = undefined, duration = 30) =>
     set({ isMyTurn: active, turnTargets: targets, turnRole: role, turnDuration: duration }),
   addChatMessage: (msg) =>
     set((s) => ({ messages: [...s.messages.slice(-99), msg] })),
