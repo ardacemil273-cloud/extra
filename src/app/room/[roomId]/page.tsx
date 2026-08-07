@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '@/stores/auth.store';
@@ -17,15 +17,21 @@ export default function LobbyPage() {
   const { currentRoom, setRoom, chatMessages, addChatMessage, setConnected } = useRoomStore();
   const [chatInput, setChatInput] = useState('');
   const [isReady, setIsReady] = useState(false);
-  const [allReady, setAllReady] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const socketRef = useRef(getRoomSocket());
+  const userRef = useRef(user);
+
+  // user değişince ref'i güncelle
+  useEffect(() => { userRef.current = user; }, [user]);
 
   useEffect(() => {
     if (!isAuthenticated) { router.push('/login'); return; }
     loadRoom();
     setupSocket();
-    return () => { socketRef.current.off(); socketRef.current.disconnect(); };
+
+    return () => {
+      socketRef.current.off();
+    };
   }, [roomId]);
 
   useEffect(() => {
@@ -35,7 +41,10 @@ export default function LobbyPage() {
   const loadRoom = async () => {
     try {
       const { data } = await api.get(`/rooms/${roomId}`);
-      setRoom(data.data || data);
+      const room = data.data || data;
+      setRoom(room);
+      const me = room.players?.find((p: any) => p.userId === userRef.current?.id);
+      if (me) setIsReady(me.isReady);
     } catch {
       toast.error('Oda bulunamadı');
       router.push('/dashboard');
@@ -43,32 +52,54 @@ export default function LobbyPage() {
   };
 
   const setupSocket = () => {
-    const socket = socketRef.current;
     connectRoomSocket();
+    const socket = socketRef.current;
+
     socket.emit('room:join', { roomId });
 
     socket.on('connect', () => setConnected(true));
     socket.on('disconnect', () => setConnected(false));
+
+    // Biri katıldığında/ayrıldığında/hazır olduğunda — anlık güncelleme
     socket.on('room:updated', (room: Room) => {
       setRoom(room);
-      const mePlayer = room.players.find((p) => p.userId === user?.id);
-      if (mePlayer) setIsReady(mePlayer.isReady);
+      const me = room.players?.find((p) => p.userId === userRef.current?.id);
+      if (me) setIsReady(me.isReady);
     });
-    socket.on('room:joined', (room: Room) => setRoom(room));
-    socket.on('room:kicked', () => { toast.error('Odadan atıldınız'); router.push('/dashboard'); });
-    socket.on('room:closed', () => { toast('Oda kapandı'); router.push('/dashboard'); });
-    socket.on('room:all-ready', () => setAllReady(true));
+
+    socket.on('room:joined', (room: Room) => {
+      setRoom(room);
+    });
+
+    socket.on('room:kicked', () => {
+      toast.error('Odadan atıldınız');
+      router.push('/dashboard');
+    });
+
+    socket.on('room:closed', () => {
+      toast('Oda kapatıldı');
+      router.push('/dashboard');
+    });
+
     socket.on('lobby:chat', (msg: ChatMessage) => addChatMessage(msg));
-    socket.on('game:started', ({ matchId }: { matchId: string }) => {
+
+    socket.on('game:started', () => {
       router.push(`/game/${roomId}`);
     });
+
     socket.on('room:error', ({ message }: { message: string }) => toast.error(message));
   };
 
+  // Odadan ayrıl
+  const handleLeave = useCallback(() => {
+    socketRef.current.emit('room:leave', { roomId });
+    router.push('/dashboard');
+  }, [roomId, router]);
+
   const handleReady = () => {
-    const newReady = !isReady;
-    setIsReady(newReady);
-    socketRef.current.emit('room:ready', { roomId, isReady: newReady });
+    const next = !isReady;
+    setIsReady(next);
+    socketRef.current.emit('room:ready', { roomId, isReady: next });
   };
 
   const handleStartGame = () => {
@@ -84,6 +115,11 @@ export default function LobbyPage() {
     socketRef.current.emit('room:select-game', { roomId, gameType });
   };
 
+  const handleCloseRoom = () => {
+    if (!confirm('Odayı kapatmak istiyor musun? Tüm oyuncular çıkarılacak.')) return;
+    socketRef.current.emit('room:close', { roomId });
+  };
+
   const handleSendChat = (e: React.FormEvent) => {
     e.preventDefault();
     if (!chatInput.trim()) return;
@@ -92,10 +128,7 @@ export default function LobbyPage() {
   };
 
   const handleCopyCode = () => {
-    if (currentRoom?.code) {
-      copyToClipboard(currentRoom.code);
-      toast.success('Kod kopyalandı!');
-    }
+    if (currentRoom?.code) { copyToClipboard(currentRoom.code); toast.success('Kod kopyalandı!'); }
   };
 
   const handleCopyLink = () => {
@@ -104,7 +137,6 @@ export default function LobbyPage() {
   };
 
   const isHost = currentRoom?.hostId === user?.id;
-  const myPlayer = currentRoom?.players.find((p) => p.userId === user?.id);
   const readyCount = currentRoom?.players.filter((p) => p.isReady).length || 0;
   const totalCount = currentRoom?.players.length || 0;
 
@@ -118,13 +150,15 @@ export default function LobbyPage() {
       <header className="sticky top-0 z-50 border-b border-white/5 bg-[#080b14]/90 backdrop-blur-xl">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
+            {/* ODADAN AYRIL BUTONU */}
             <button
-              onClick={() => { socketRef.current.emit('room:leave', { roomId }); router.push('/dashboard'); }}
-              className="p-2 rounded-lg bg-white/5 hover:bg-red-500/10 hover:border-red-500/20 border border-white/5 transition-all"
+              onClick={handleLeave}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-red-400 text-sm font-semibold transition-all active:scale-95"
             >
-              <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
               </svg>
+              Ayrıl
             </button>
             <div>
               <h1 className="font-bold">{currentRoom?.name || 'Yükleniyor...'}</h1>
@@ -132,12 +166,21 @@ export default function LobbyPage() {
             </div>
           </div>
 
-          {/* Room code */}
           <div className="flex items-center gap-2">
+            {/* Host: Odayı Kapat */}
+            {isHost && (
+              <button
+                onClick={handleCloseRoom}
+                className="px-3 py-2 rounded-xl border border-red-700/30 bg-red-900/20 hover:bg-red-900/30 text-red-500 text-xs font-semibold transition-all"
+              >
+                🔒 Odayı Kapat
+              </button>
+            )}
+            {/* Kod */}
             <div className="flex items-center gap-2 px-4 py-2 rounded-xl border border-white/10 bg-white/3">
               <span className="text-xs text-gray-500">Kod:</span>
               <span className="font-black tracking-widest text-purple-400 font-mono">{currentRoom?.code}</span>
-              <button onClick={handleCopyCode} className="text-gray-500 hover:text-white transition-colors" title="Kopyala">
+              <button onClick={handleCopyCode} className="text-gray-500 hover:text-white transition-colors">
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                 </svg>
@@ -153,7 +196,7 @@ export default function LobbyPage() {
       <div className="max-w-7xl mx-auto px-6 py-6">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-          {/* Players */}
+          {/* Oyuncular */}
           <div className="lg:col-span-2 space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="font-bold text-lg">Oyuncular</h2>
@@ -161,57 +204,56 @@ export default function LobbyPage() {
             </div>
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              {currentRoom?.players.map((rp, i) => (
-                <motion.div
-                  key={rp.userId}
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: i * 0.05 }}
-                  className={`relative rounded-2xl border p-4 text-center transition-all ${
-                    rp.isReady
-                      ? 'border-green-500/30 bg-green-500/5'
-                      : 'border-white/8 bg-white/3'
-                  }`}
-                >
-                  {rp.isHost && (
-                    <div className="absolute -top-2 left-1/2 -translate-x-1/2 text-xs px-2 py-0.5 rounded-full bg-yellow-500/20 border border-yellow-500/30 text-yellow-400">
-                      Host
+              <AnimatePresence>
+                {currentRoom?.players.map((rp, i) => (
+                  <motion.div
+                    key={rp.userId}
+                    initial={{ opacity: 0, scale: 0.85 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.85 }}
+                    transition={{ duration: 0.2 }}
+                    className={`relative group rounded-2xl border p-4 text-center transition-all ${
+                      rp.isReady ? 'border-green-500/30 bg-green-500/5' : 'border-white/8 bg-white/3'
+                    }`}
+                  >
+                    {rp.isHost && (
+                      <div className="absolute -top-2 left-1/2 -translate-x-1/2 text-xs px-2 py-0.5 rounded-full bg-yellow-500/20 border border-yellow-500/30 text-yellow-400 whitespace-nowrap">
+                        Host
+                      </div>
+                    )}
+                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500/30 to-fuchsia-500/30 border border-purple-500/20 flex items-center justify-center text-xl font-black mx-auto mb-2">
+                      {(rp.user?.profile?.displayName || rp.user?.username || '?')[0].toUpperCase()}
                     </div>
-                  )}
-                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500/30 to-fuchsia-500/30 border border-purple-500/20 flex items-center justify-center text-xl font-black mx-auto mb-2">
-                    {(rp.user?.profile?.displayName || rp.user?.username || '?')[0].toUpperCase()}
-                  </div>
-                  <div className="text-sm font-semibold truncate">
-                    {rp.user?.profile?.displayName || rp.user?.username}
-                  </div>
-                  <div className="text-xs text-gray-500 mt-0.5">Lv.{rp.user?.profile?.level || 1}</div>
-                  <div className={`mt-2 text-xs font-semibold ${rp.isReady ? 'text-green-400' : 'text-gray-500'}`}>
-                    {rp.isReady ? '✓ Hazır' : 'Bekleniyor'}
-                  </div>
-
-                  {isHost && rp.userId !== user?.id && (
-                    <button
-                      onClick={() => handleKick(rp.userId)}
-                      className="absolute top-2 right-2 w-5 h-5 rounded-full bg-red-500/20 hover:bg-red-500/40 text-red-400 text-xs flex items-center justify-center transition-all opacity-0 group-hover:opacity-100"
-                      title="At"
-                    >
-                      ×
-                    </button>
-                  )}
-                </motion.div>
-              ))}
-
-              {/* Empty slots */}
-              {Array.from({ length: Math.max(0, (currentRoom?.maxPlayers || 8) - (currentRoom?.players.length || 0)) })
-                .slice(0, 4)
-                .map((_, i) => (
-                  <div key={`empty-${i}`} className="rounded-2xl border border-dashed border-white/5 p-4 flex items-center justify-center text-gray-700 text-sm">
-                    Boş
-                  </div>
+                    <div className="text-sm font-semibold truncate">
+                      {rp.user?.profile?.displayName || rp.user?.username}
+                    </div>
+                    <div className="text-xs text-gray-500 mt-0.5">Lv.{rp.user?.profile?.level || 1}</div>
+                    <div className={`mt-2 text-xs font-semibold ${rp.isReady ? 'text-green-400' : 'text-gray-500'}`}>
+                      {rp.isReady ? '✓ Hazır' : 'Bekleniyor'}
+                    </div>
+                    {/* Host: At butonu */}
+                    {isHost && rp.userId !== user?.id && (
+                      <button
+                        onClick={() => handleKick(rp.userId)}
+                        className="absolute top-2 right-2 w-5 h-5 rounded-full bg-red-500/20 hover:bg-red-500/50 text-red-400 text-xs items-center justify-center transition-all hidden group-hover:flex"
+                        title="At"
+                      >
+                        ×
+                      </button>
+                    )}
+                  </motion.div>
                 ))}
+              </AnimatePresence>
+
+              {/* Boş slotlar */}
+              {Array.from({ length: Math.max(0, Math.min(4, (currentRoom?.maxPlayers || 8) - totalCount)) }).map((_, i) => (
+                <div key={`empty-${i}`} className="rounded-2xl border border-dashed border-white/5 p-4 flex items-center justify-center text-gray-700 text-sm">
+                  Boş
+                </div>
+              ))}
             </div>
 
-            {/* Game selection (host only) */}
+            {/* Oyun seç (sadece host) */}
             {isHost && (
               <div className="rounded-2xl border border-white/8 bg-white/3 p-5">
                 <h3 className="font-semibold mb-3 text-gray-300">Oyun Seç</h3>
@@ -238,14 +280,14 @@ export default function LobbyPage() {
               </div>
             )}
 
-            {/* Actions */}
+            {/* Hazır + Başlat */}
             <div className="flex items-center gap-3">
               <button
                 onClick={handleReady}
                 className={`flex-1 py-3.5 rounded-xl font-bold text-sm transition-all active:scale-95 ${
                   isReady
                     ? 'bg-green-500/20 border border-green-500/30 text-green-400 hover:bg-green-500/30'
-                    : 'bg-gradient-to-r from-green-600 to-emerald-500 hover:from-green-500 hover:to-emerald-400 text-white shadow-lg shadow-green-500/20'
+                    : 'bg-gradient-to-r from-green-600 to-emerald-500 hover:from-green-500 hover:to-emerald-400 text-white'
                 }`}
               >
                 {isReady ? '✓ Hazırım' : 'Hazır'}
@@ -255,14 +297,11 @@ export default function LobbyPage() {
                 <button
                   onClick={handleStartGame}
                   disabled={!currentRoom?.gameType || readyCount < totalCount || totalCount < 4}
-                  className="flex-1 py-3.5 rounded-xl font-bold text-sm bg-gradient-to-r from-purple-600 to-fuchsia-500 hover:from-purple-500 hover:to-fuchsia-400 disabled:opacity-40 disabled:cursor-not-allowed transition-all active:scale-95 shadow-lg shadow-purple-500/20"
+                  className="flex-1 py-3.5 rounded-xl font-bold text-sm bg-gradient-to-r from-purple-600 to-fuchsia-500 hover:from-purple-500 hover:to-fuchsia-400 disabled:opacity-40 disabled:cursor-not-allowed transition-all active:scale-95"
                 >
-                  {!currentRoom?.gameType
-                    ? '⚠ Oyun Seç'
-                    : readyCount < totalCount
-                    ? `⏳ ${readyCount}/${totalCount} Hazır`
-                    : totalCount < 4
-                    ? '⚠ Min 4 Oyuncu'
+                  {!currentRoom?.gameType ? '⚠ Oyun Seç'
+                    : totalCount < 4 ? '⚠ Min 4 Oyuncu'
+                    : readyCount < totalCount ? `⏳ ${readyCount}/${totalCount} Hazır`
                     : '🎮 Oyunu Başlat'}
                 </button>
               )}
@@ -273,31 +312,23 @@ export default function LobbyPage() {
           <div className="lg:col-span-1 flex flex-col rounded-2xl border border-white/8 bg-white/3 overflow-hidden" style={{ height: '70vh' }}>
             <div className="px-4 py-3 border-b border-white/5 flex items-center gap-2">
               <span className="text-sm font-semibold">💬 Sohbet</span>
-              <span className="text-xs text-gray-600">{chatMessages.length} mesaj</span>
+              <span className="text-xs text-gray-600">{chatMessages.length}</span>
             </div>
 
             <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2">
               {chatMessages.length === 0 && (
-                <p className="text-center text-gray-600 text-xs mt-8">Henüz mesaj yok. Merhaba de! 👋</p>
+                <p className="text-center text-gray-600 text-xs mt-8">Henüz mesaj yok 👋</p>
               )}
               <AnimatePresence initial={false}>
                 {chatMessages.map((msg, i) => (
-                  <motion.div
-                    key={i}
-                    initial={{ opacity: 0, y: 5 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className={`flex gap-2 ${msg.userId === user?.id ? 'flex-row-reverse' : ''}`}
-                  >
-                    <div className="w-6 h-6 rounded-full bg-gradient-to-br from-purple-500/40 to-fuchsia-500/40 flex items-center justify-center text-xs font-bold flex-shrink-0">
+                  <motion.div key={i} initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }}
+                    className={`flex gap-2 ${msg.userId === user?.id ? 'flex-row-reverse' : ''}`}>
+                    <div className="w-6 h-6 rounded-full bg-purple-500/30 flex items-center justify-center text-xs font-bold flex-shrink-0">
                       {(msg.displayName || msg.username || '?')[0].toUpperCase()}
                     </div>
-                    <div className={`max-w-[75%] ${msg.userId === user?.id ? 'items-end' : 'items-start'} flex flex-col gap-0.5`}>
+                    <div className={`max-w-[75%] flex flex-col gap-0.5 ${msg.userId === user?.id ? 'items-end' : 'items-start'}`}>
                       <span className="text-xs text-gray-600">{msg.displayName || msg.username}</span>
-                      <div className={`px-3 py-2 rounded-xl text-sm ${
-                        msg.userId === user?.id
-                          ? 'bg-purple-600/30 text-purple-100'
-                          : 'bg-white/5 text-gray-200'
-                      }`}>
+                      <div className={`px-3 py-2 rounded-xl text-sm ${msg.userId === user?.id ? 'bg-purple-600/30 text-purple-100' : 'bg-white/5 text-gray-200'}`}>
                         {msg.message}
                       </div>
                     </div>
@@ -308,17 +339,10 @@ export default function LobbyPage() {
             </div>
 
             <form onSubmit={handleSendChat} className="p-3 border-t border-white/5 flex gap-2">
-              <input
-                type="text"
-                value={chatInput}
-                onChange={(e) => setChatInput(e.target.value)}
-                placeholder="Mesaj yaz..."
-                maxLength={300}
-                className="flex-1 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-600 focus:outline-none focus:border-purple-500 text-sm transition-all"
-              />
-              <button type="submit" className="px-3 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-sm transition-all active:scale-95">
-                ↑
-              </button>
+              <input type="text" value={chatInput} onChange={(e) => setChatInput(e.target.value)}
+                placeholder="Mesaj yaz..." maxLength={300}
+                className="flex-1 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-600 focus:outline-none focus:border-purple-500 text-sm transition-all" />
+              <button type="submit" className="px-3 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-sm transition-all active:scale-95">↑</button>
             </form>
           </div>
         </div>
