@@ -20,21 +20,21 @@ function createSocket(namespace: string): Socket {
 }
 
 export function getRoomSocket(): Socket {
-  if (!roomSocket || roomSocket.disconnected) {
+  if (!roomSocket) {
     roomSocket = createSocket('/rooms');
   }
   return roomSocket;
 }
 
 export function getGameSocket(): Socket {
-  if (!gameSocket || gameSocket.disconnected) {
+  if (!gameSocket) {
     gameSocket = createSocket('/game');
   }
   return gameSocket;
 }
 
 export function getVoiceSocket(): Socket {
-  if (!voiceSocket || voiceSocket.disconnected) {
+  if (!voiceSocket) {
     voiceSocket = createSocket('/voice');
   }
   return voiceSocket;

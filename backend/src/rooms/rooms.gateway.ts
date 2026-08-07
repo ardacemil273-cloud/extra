@@ -162,6 +162,27 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
+  @SubscribeMessage('room:close')
+  async handleCloseRoom(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { roomId: string },
+  ) {
+    const userId = client.data.userId;
+    if (!userId) return;
+
+    try {
+      await this.roomsService.closeRoom(userId, data.roomId);
+      this.server.to(`room:${data.roomId}`).emit('room:closed');
+
+      const sockets = await this.server.in(`room:${data.roomId}`).fetchSockets();
+      for (const s of sockets) {
+        s.leave(`room:${data.roomId}`);
+      }
+    } catch (err) {
+      client.emit('room:error', { message: err.message });
+    }
+  }
+
   @SubscribeMessage('room:select-game')
   async handleSelectGame(
     @ConnectedSocket() client: Socket,

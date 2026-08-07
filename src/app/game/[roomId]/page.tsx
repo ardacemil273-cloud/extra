@@ -7,6 +7,7 @@ import { useGameStore } from '@/stores/game.store';
 import { getGameSocket, connectGameSocket } from '@/lib/socket';
 import { ROLE_CONFIG, GamePlayer, VampireRole } from '@/types';
 import toast from 'react-hot-toast';
+import VoicePanel from '@/components/voice/VoicePanel';
 
 export default function GamePage() {
   const { roomId } = useParams<{ roomId: string }>();
@@ -84,6 +85,24 @@ export default function GamePage() {
 
   useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
 
+  // 🔊 AI Sesli Anlatım — yeni narrator mesajı geldiğinde otomatik seslendirir
+  const lastSpokenIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (narratorMessages.length === 0) return;
+    const last = narratorMessages[narratorMessages.length - 1];
+    if (last.id === lastSpokenIdRef.current) return;
+    lastSpokenIdRef.current = last.id;
+
+    if (typeof window !== 'undefined' && window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(last.message);
+      utterance.lang = 'tr-TR';
+      utterance.rate = 0.95;
+      utterance.pitch = 0.85;
+      window.speechSynthesis.speak(utterance);
+    }
+  }, [narratorMessages]);
+
   const startTimer = (duration: number) => {
     if (timerRef.current) clearInterval(timerRef.current);
     setTimeLeft(duration);
@@ -160,6 +179,38 @@ export default function GamePage() {
 
   return (
     <div className={`min-h-screen text-white transition-all duration-1000 ${isNight ? 'bg-[#020408]' : 'bg-[#080b14]'}`}>
+      {/* FULL BLACKOUT — sıra sende değilse tüm ekran kararır */}
+      <AnimatePresence>
+        {isNight && !isMyTurn && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] bg-black flex flex-col items-center justify-center px-6"
+          >
+            <motion.div
+              animate={{ scale: [1, 1.1, 1], opacity: [0.6, 1, 0.6] }}
+              transition={{ duration: 3, repeat: Infinity }}
+              className="text-7xl mb-6"
+            >
+              🌙
+            </motion.div>
+            <p className="text-gray-500 text-sm text-center max-w-md">
+              {narratorMessages.length > 0
+                ? narratorMessages[narratorMessages.length - 1].message
+                : nightActiveRole
+                ? `${ROLE_CONFIG[nightActiveRole as VampireRole]?.icon || ''} ${ROLE_CONFIG[nightActiveRole as VampireRole]?.name || nightActiveRole} karar veriyor...`
+                : 'Gece devam ediyor...'}
+            </p>
+            {timeLeft > 0 && (
+              <span className="mt-4 font-mono text-xs text-gray-700">
+                {Math.floor(timeLeft / 60)}:{String(timeLeft % 60).padStart(2, '0')}
+              </span>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Night overlay effect */}
       <AnimatePresence>
         {isNight && (
@@ -330,8 +381,15 @@ export default function GamePage() {
             </AnimatePresence>
           </div>
 
-          {/* Right panel - Chat */}
-          <div className="flex flex-col rounded-2xl border border-white/8 bg-white/2 overflow-hidden" style={{ height: '75vh' }}>
+          {/* Right panel - Voice + Chat */}
+          <div className="flex flex-col gap-3" style={{ height: '75vh' }}>
+            {/* Voice Panel — sadece gündüz aktif */}
+            {!isNight && user?.id && (
+              <VoicePanel roomId={roomId} userId={user.id} />
+            )}
+
+            {/* Chat */}
+            <div className="flex-1 flex flex-col rounded-2xl border border-white/8 bg-white/2 overflow-hidden min-h-0">
             <div className="px-4 py-3 border-b border-white/5">
               <span className="text-sm font-semibold">💬 {isNight ? 'Sessizlik...' : 'Sohbet'}</span>
             </div>
@@ -374,7 +432,8 @@ export default function GamePage() {
                 {isNight ? '🌙 Gece boyunca sohbet kapalı' : 'Tartışma bekleniyor...'}
               </div>
             )}
-          </div>
+            </div>{/* end chat box */}
+          </div>{/* end right col */}
         </div>
       </div>
     </div>

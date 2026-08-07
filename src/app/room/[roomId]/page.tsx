@@ -5,6 +5,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '@/stores/auth.store';
 import { useRoomStore } from '@/stores/room.store';
 import { getRoomSocket, connectRoomSocket } from '@/lib/socket';
+import Navbar from '@/components/layout/Navbar';
+import VoicePanel from '@/components/voice/VoicePanel';
 import api from '@/lib/api';
 import toast from 'react-hot-toast';
 import { Room, ChatMessage, GAME_TYPES } from '@/types';
@@ -145,9 +147,10 @@ export default function LobbyPage() {
       <div className="fixed inset-0 pointer-events-none">
         <div className="absolute top-0 left-1/3 w-96 h-96 bg-purple-600/6 rounded-full blur-3xl" />
       </div>
+      <Navbar />
 
-      {/* Header */}
-      <header className="sticky top-0 z-50 border-b border-white/5 bg-[#080b14]/90 backdrop-blur-xl">
+      {/* Sub-header */}
+      <header className="sticky top-16 z-40 border-b border-white/5 bg-[#080b14]/90 backdrop-blur-xl">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
             {/* ODADAN AYRIL BUTONU */}
@@ -309,7 +312,12 @@ export default function LobbyPage() {
           </div>
 
           {/* Chat */}
-          <div className="lg:col-span-1 flex flex-col rounded-2xl border border-white/8 bg-white/3 overflow-hidden" style={{ height: '70vh' }}>
+          <div className="lg:col-span-1 space-y-4">
+            {/* Voice Panel */}
+            {user?.id && <VoicePanel roomId={roomId} userId={user.id} />}
+
+            {/* Chat */}
+            <div className="flex flex-col rounded-2xl border border-white/8 bg-white/3 overflow-hidden" style={{ height: '55vh' }}>
             <div className="px-4 py-3 border-b border-white/5 flex items-center gap-2">
               <span className="text-sm font-semibold">💬 Sohbet</span>
               <span className="text-xs text-gray-600">{chatMessages.length}</span>
@@ -344,7 +352,8 @@ export default function LobbyPage() {
                 className="flex-1 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-600 focus:outline-none focus:border-purple-500 text-sm transition-all" />
               <button type="submit" className="px-3 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-sm transition-all active:scale-95">↑</button>
             </form>
-          </div>
+            </div>{/* end chat box */}
+          </div>{/* end right col */}
         </div>
       </div>
     </div>

@@ -153,6 +153,20 @@ export class RoomsService {
     return { kicked: true };
   }
 
+  async closeRoom(hostId: string, roomId: string) {
+    const room = await this.prisma.room.findUnique({ where: { id: roomId } });
+    if (!room) throw new NotFoundException('Oda bulunamadı');
+    if (room.hostId !== hostId) throw new ForbiddenException('Sadece host odayı kapatabilir');
+
+    await this.prisma.room.update({
+      where: { id: roomId },
+      data: { status: RoomStatus.FINISHED },
+    });
+
+    await this.prisma.roomPlayer.deleteMany({ where: { roomId } });
+    return { closed: true };
+  }
+
   async selectGame(hostId: string, roomId: string, gameType: string) {
     const room = await this.prisma.room.findUnique({ where: { id: roomId } });
     if (!room) throw new NotFoundException('Oda bulunamadı');

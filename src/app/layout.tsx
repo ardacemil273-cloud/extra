@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import { Toaster } from 'react-hot-toast';
-import '@/styles/globals.css';
+import '../styles/globals.css';
 
 export const metadata: Metadata = {
   title: { default: 'PartyVerse - Sosyal Parti Oyun Platformu', template: '%s | PartyVerse' },
@@ -28,7 +28,7 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="tr" className="dark">
-      <body className="bg-background text-white antialiased">
+      <body className="min-h-screen" style={{ backgroundColor: '#080b14', color: 'white' }}>
         {children}
         <Toaster
           position="top-right"
