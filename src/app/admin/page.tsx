@@ -1,10 +1,12 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useAuthStore } from '@/stores/auth.store';
 import api from '@/lib/api';
 import toast from 'react-hot-toast';
+
+// Admin şifresi — istediğin gibi değiştir
+const ADMIN_PASSWORD = 'partyverse2026';
 
 interface AdminRoom {
   id: string;
@@ -15,77 +17,153 @@ interface AdminRoom {
   maxPlayers: number;
   isPrivate: boolean;
   createdAt: string;
-  players: { userId: string; user: { username: string; profile?: { displayName: string } } }[];
+  players: { userId: string; isHost: boolean; user: { username: string; profile?: { displayName: string } } }[];
   host: { id: string; username: string; profile?: { displayName: string } };
 }
 
-// Admin kullanıcı adları — değiştir
-const ADMIN_USERNAMES = ['admin', 'partyverse_admin', 'cemil1212'];
-
 export default function AdminPage() {
   const router = useRouter();
-  const { user, isAuthenticated } = useAuthStore();
+  const [authed, setAuthed] = useState(false);
+  const [pwInput, setPwInput] = useState('');
   const [rooms, setRooms] = useState<AdminRoom[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<'all' | 'WAITING' | 'IN_GAME'>('all');
-  const [stats, setStats] = useState({ totalRooms: 0, activeGames: 0, totalPlayers: 0, waitingRooms: 0 });
+  const [resetting, setResetting] = useState(false);
+  const [stats, setStats] = useState({ totalRooms: 0, activeGames: 0, waitingRooms: 0, totalPlayers: 0 });
 
-  const isAdmin = user && ADMIN_USERNAMES.includes(user.username);
+  // Sayfa açılınca session'dan kontrol et
+  useEffect(() => {
+    const saved = sessionStorage.getItem('admin_authed');
+    if (saved === 'yes') setAuthed(true);
+  }, []);
 
   useEffect(() => {
-    if (!isAuthenticated) { router.push('/login'); return; }
-    if (!isAdmin) { router.push('/dashboard'); toast.error('Yetkisiz erişim'); return; }
+    if (!authed) return;
     fetchRooms();
-    const interval = setInterval(fetchRooms, 5000); // 5 saniyede bir yenile
+    const interval = setInterval(fetchRooms, 4000);
     return () => clearInterval(interval);
-  }, [isAuthenticated, isAdmin]);
+  }, [authed]);
 
-  const fetchRooms = async () => {
+  const fetchRooms = useCallback(async () => {
+    setLoading(true);
     try {
       const { data } = await api.get('/rooms/public');
-      const allRooms: AdminRoom[] = data.data || data;
-      setRooms(allRooms);
-
+      const list: AdminRoom[] = data.data || data;
+      setRooms(list);
       setStats({
-        totalRooms: allRooms.length,
-        activeGames: allRooms.filter((r) => r.status === 'IN_GAME').length,
-        waitingRooms: allRooms.filter((r) => r.status === 'WAITING').length,
-        totalPlayers: allRooms.reduce((sum, r) => sum + r.players.length, 0),
+        totalRooms: list.length,
+        activeGames: list.filter((r) => r.status === 'IN_GAME').length,
+        waitingRooms: list.filter((r) => r.status === 'WAITING').length,
+        totalPlayers: list.reduce((s, r) => s + r.players.length, 0),
       });
     } catch {
-      toast.error('Odalar yüklenemedi');
+      // backend yoksa boş göster
+      setRooms([]);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const handleCloseRoom = async (roomId: string, roomName: string) => {
-    if (!confirm(`"${roomName}" odasını kapatmak istediğine emin misin?`)) return;
-    try {
-      // Admin direkt API ile odayı kapatır
-      await api.delete(`/rooms/${roomId}/leave`);
-      toast.success(`"${roomName}" odası kapatıldı`);
-      fetchRooms();
-    } catch (err: any) {
-      toast.error(err?.response?.data?.message || 'Oda kapatılamadı');
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (pwInput === ADMIN_PASSWORD) {
+      setAuthed(true);
+      sessionStorage.setItem('admin_authed', 'yes');
+      toast.success('Admin panele hoş geldin!');
+    } else {
+      toast.error('Yanlış şifre');
+      setPwInput('');
     }
   };
 
+  const handleCloseRoom = async (room: AdminRoom) => {
+    if (!confirm(`"${room.name}" odasını kapatmak istediğine emin misin?\n${room.players.length} oyuncu çıkarılacak.`)) return;
+    try {
+      // Host olarak çık → oda kapanır
+      await api.delete(`/rooms/${room.id}/leave`);
+      toast.success(`"${room.name}" kapatıldı`);
+      fetchRooms();
+    } catch {
+      // Direkt API yoksa socket ile kapatabiliriz, şimdilik bilgi ver
+      toast.error('Oda kapatılamadı — backend bağlantısı yok');
+    }
+  };
+
+  const handleResetAllRooms = async () => {
+    if (!confirm('TÜM ODALARI kapatmak istediğine emin misin? Bu işlem geri alınamaz!')) return;
+    setResetting(true);
+    let closed = 0;
+    for (const room of rooms) {
+      try {
+        await api.delete(`/rooms/${room.id}/leave`);
+        closed++;
+      } catch {}
+    }
+    toast.success(`${closed} oda kapatıldı`);
+    setResetting(false);
+    fetchRooms();
+  };
+
+  const handleLogout = () => {
+    sessionStorage.removeItem('admin_authed');
+    setAuthed(false);
+  };
+
   const filtered = rooms.filter((r) => {
-    const matchSearch = r.name.toLowerCase().includes(search.toLowerCase()) ||
-      r.code.toLowerCase().includes(search.toLowerCase()) ||
-      r.host?.username.toLowerCase().includes(search.toLowerCase());
-    const matchFilter = filter === 'all' || r.status === filter;
-    return matchSearch && matchFilter;
+    const q = search.toLowerCase();
+    const match = r.name.toLowerCase().includes(q) ||
+      r.code.toLowerCase().includes(q) ||
+      r.host?.username?.toLowerCase().includes(q);
+    const statusMatch = filter === 'all' || r.status === filter;
+    return match && statusMatch;
   });
 
-  if (!isAdmin) return null;
+  // ─── Giriş ekranı ───────────────────────────────────────────
+  if (!authed) {
+    return (
+      <div className="min-h-screen bg-[#080b14] text-white flex items-center justify-center px-4">
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+          className="w-full max-w-sm">
+          <div className="text-center mb-8">
+            <div className="text-5xl mb-4">⚙️</div>
+            <h1 className="text-2xl font-black">Admin Paneli</h1>
+            <p className="text-gray-500 text-sm mt-1">PartyVerse yönetim konsolu</p>
+          </div>
+          <div className="rounded-2xl border border-white/8 bg-white/3 p-8">
+            <form onSubmit={handleLogin} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-1.5">Admin Şifresi</label>
+                <input
+                  type="password"
+                  value={pwInput}
+                  onChange={(e) => setPwInput(e.target.value)}
+                  placeholder="••••••••"
+                  autoFocus
+                  className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-600 focus:outline-none focus:border-purple-500 transition-all"
+                  required
+                />
+              </div>
+              <button type="submit"
+                className="w-full py-3 rounded-xl font-bold bg-gradient-to-r from-purple-600 to-fuchsia-500 hover:from-purple-500 hover:to-fuchsia-400 transition-all active:scale-95">
+                Giriş Yap
+              </button>
+            </form>
+            <button onClick={() => router.push('/dashboard')}
+              className="w-full mt-3 py-2 rounded-xl text-sm text-gray-500 hover:text-white transition-colors">
+              ← Dashboard'a dön
+            </button>
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
 
+  // ─── Admin paneli ────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-[#080b14] text-white">
       <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute top-0 right-1/3 w-96 h-96 bg-red-600/5 rounded-full blur-3xl" />
+        <div className="absolute top-0 right-1/3 w-96 h-96 bg-red-600/4 rounded-full blur-3xl" />
       </div>
 
       {/* Header */}
@@ -100,14 +178,23 @@ export default function AdminPage() {
             </button>
             <div>
               <h1 className="font-black text-lg">⚙️ Admin Paneli</h1>
-              <p className="text-xs text-gray-500">PartyVerse yönetim konsolu</p>
+              <p className="text-xs text-gray-500">Otomatik yenileme: 4s</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-xs text-gray-500">Otomatik yenileme: 5s</span>
             <button onClick={fetchRooms}
               className="px-3 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-xs transition-all">
               🔄 Yenile
+            </button>
+            <button
+              onClick={handleResetAllRooms}
+              disabled={resetting || rooms.length === 0}
+              className="px-3 py-2 rounded-xl border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs font-semibold transition-all disabled:opacity-40">
+              {resetting ? '⏳ Sıfırlanıyor...' : '🗑️ Tüm Odaları Sıfırla'}
+            </button>
+            <button onClick={handleLogout}
+              className="px-3 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-xs text-gray-400 transition-all">
+              Çıkış
             </button>
           </div>
         </div>
@@ -123,7 +210,8 @@ export default function AdminPage() {
             { label: 'Bekleyen', value: stats.waitingRooms, icon: '⏳', color: 'border-yellow-500/20 bg-yellow-500/5' },
             { label: 'Toplam Oyuncu', value: stats.totalPlayers, icon: '👥', color: 'border-purple-500/20 bg-purple-500/5' },
           ].map((s, i) => (
-            <motion.div key={i} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
+            <motion.div key={i} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.05 }}
               className={`rounded-2xl border p-5 ${s.color}`}>
               <div className="text-3xl mb-2">{s.icon}</div>
               <div className="text-2xl font-black">{s.value}</div>
@@ -132,12 +220,10 @@ export default function AdminPage() {
           ))}
         </div>
 
-        {/* Filtreler */}
+        {/* Arama + Filtre */}
         <div className="flex flex-col sm:flex-row gap-3">
           <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            type="text" value={search} onChange={(e) => setSearch(e.target.value)}
             placeholder="Oda adı, kod veya host ara..."
             className="flex-1 px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-600 focus:outline-none focus:border-purple-500 text-sm transition-all"
           />
@@ -149,7 +235,7 @@ export default function AdminPage() {
                     ? 'border-purple-500 bg-purple-500/20 text-purple-300'
                     : 'border-white/10 bg-white/3 text-gray-400 hover:border-white/20'
                 }`}>
-                {f === 'all' ? 'Hepsi' : f === 'WAITING' ? 'Bekliyor' : 'Oyunda'}
+                {f === 'all' ? 'Hepsi' : f === 'WAITING' ? '⏳ Bekliyor' : '🎮 Oyunda'}
               </button>
             ))}
           </div>
@@ -159,39 +245,45 @@ export default function AdminPage() {
         <div className="rounded-2xl border border-white/8 bg-white/2 overflow-hidden">
           <div className="px-6 py-4 border-b border-white/5 flex items-center justify-between">
             <h2 className="font-bold">Odalar ({filtered.length})</h2>
+            {loading && (
+              <div className="flex items-center gap-2 text-xs text-gray-500">
+                <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                </svg>
+                Güncelleniyor
+              </div>
+            )}
           </div>
 
-          {loading ? (
-            <div className="p-12 text-center text-gray-500">Yükleniyor...</div>
-          ) : filtered.length === 0 ? (
-            <div className="p-12 text-center">
-              <div className="text-4xl mb-3">🏠</div>
-              <p className="text-gray-500">Oda bulunamadı</p>
+          {filtered.length === 0 ? (
+            <div className="p-16 text-center">
+              <div className="text-5xl mb-3">🏠</div>
+              <p className="text-gray-500 text-sm">
+                {rooms.length === 0 ? 'Hiç oda yok — temiz!' : 'Arama sonucu bulunamadı'}
+              </p>
             </div>
           ) : (
             <div className="divide-y divide-white/3">
               <AnimatePresence>
-                {filtered.map((room, i) => (
+                {filtered.map((room) => (
                   <motion.div key={room.id}
-                    initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                    className="px-6 py-4 flex items-center gap-4 hover:bg-white/2 transition-all">
+                    initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}
+                    className="px-6 py-4 flex items-start gap-4 hover:bg-white/2 transition-all">
 
-                    {/* Status dot */}
-                    <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${
-                      room.status === 'IN_GAME' ? 'bg-green-400 animate-pulse' :
-                      room.status === 'WAITING' ? 'bg-yellow-400' : 'bg-gray-600'
+                    {/* Status */}
+                    <div className={`mt-1.5 w-2.5 h-2.5 rounded-full flex-shrink-0 ${
+                      room.status === 'IN_GAME' ? 'bg-green-400 animate-pulse' : 'bg-yellow-400'
                     }`} />
 
-                    {/* Oda bilgisi */}
+                    {/* Bilgi */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-semibold truncate">{room.name}</span>
+                        <span className="font-semibold">{room.name}</span>
                         <span className="font-mono text-xs text-purple-400 bg-purple-500/10 px-2 py-0.5 rounded-full border border-purple-500/20">
                           {room.code}
                         </span>
-                        {room.isPrivate && (
-                          <span className="text-xs text-gray-500 bg-white/5 px-2 py-0.5 rounded-full">🔒 Özel</span>
-                        )}
+                        {room.isPrivate && <span className="text-xs text-gray-500">🔒</span>}
                         <span className={`text-xs px-2 py-0.5 rounded-full border ${
                           room.status === 'IN_GAME'
                             ? 'bg-green-500/10 border-green-500/20 text-green-400'
@@ -200,31 +292,36 @@ export default function AdminPage() {
                           {room.status === 'IN_GAME' ? '🎮 Oyunda' : '⏳ Bekliyor'}
                         </span>
                       </div>
-                      <div className="flex items-center gap-3 mt-1 text-xs text-gray-500">
-                        <span>Host: <span className="text-gray-300">{room.host?.profile?.displayName || room.host?.username}</span></span>
-                        <span>Oyuncu: <span className="text-gray-300">{room.players.length}/{room.maxPlayers}</span></span>
-                        {room.gameType && <span>Oyun: <span className="text-gray-300">{room.gameType === 'vampire-village' ? '🧛 Vampir Köylü' : room.gameType}</span></span>}
+
+                      <div className="flex flex-wrap gap-3 mt-1 text-xs text-gray-500">
+                        <span>Host: <span className="text-gray-300 font-medium">{room.host?.profile?.displayName || room.host?.username}</span></span>
+                        <span>Oyuncu: <span className="text-gray-300 font-medium">{room.players.length}/{room.maxPlayers}</span></span>
+                        {room.gameType && (
+                          <span>Oyun: <span className="text-gray-300">{room.gameType === 'vampire-village' ? '🧛 Vampir Köylü' : room.gameType}</span></span>
+                        )}
                       </div>
 
-                      {/* Oyuncu listesi */}
-                      <div className="flex items-center gap-1 mt-2 flex-wrap">
+                      {/* Oyuncular */}
+                      <div className="flex flex-wrap gap-1 mt-2">
                         {room.players.map((p) => (
-                          <span key={p.userId} className="text-xs px-2 py-0.5 rounded-full bg-white/5 text-gray-400">
-                            {p.user?.profile?.displayName || p.user?.username}
+                          <span key={p.userId}
+                            className={`text-xs px-2 py-0.5 rounded-full border ${
+                              p.isHost
+                                ? 'bg-yellow-500/10 border-yellow-500/20 text-yellow-400'
+                                : 'bg-white/5 border-white/5 text-gray-400'
+                            }`}>
+                            {p.isHost ? '👑 ' : ''}{p.user?.profile?.displayName || p.user?.username}
                           </span>
                         ))}
                       </div>
                     </div>
 
-                    {/* Aksiyonlar */}
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      <button
-                        onClick={() => handleCloseRoom(room.id, room.name)}
-                        className="px-3 py-2 rounded-xl border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs font-semibold transition-all active:scale-95"
-                      >
-                        🔒 Kapat
-                      </button>
-                    </div>
+                    {/* Kapat butonu */}
+                    <button
+                      onClick={() => handleCloseRoom(room)}
+                      className="flex-shrink-0 px-3 py-2 rounded-xl border border-red-500/30 bg-red-500/10 hover:bg-red-500/25 text-red-400 text-xs font-semibold transition-all active:scale-95">
+                      🔒 Kapat
+                    </button>
                   </motion.div>
                 ))}
               </AnimatePresence>
@@ -232,9 +329,8 @@ export default function AdminPage() {
           )}
         </div>
 
-        {/* Admin not */}
         <p className="text-center text-xs text-gray-700">
-          Admin paneline erişim: kullanıcı adın ADMIN_USERNAMES listesinde olmalı — şu an: {user?.username}
+          Admin şifresi: <code className="text-gray-600">partyverse2026</code> — istersen değiştir
         </p>
       </main>
     </div>

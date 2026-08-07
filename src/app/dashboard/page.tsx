@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
@@ -16,11 +16,30 @@ export default function DashboardPage() {
   const { unreadCount, fetch: fetchNotifications } = useNotificationsStore();
   const [publicRooms, setPublicRooms] = useState<any[]>([]);
   const [joinCode, setJoinCode] = useState('');
+  const socketRef = useRef<any>(null);
 
   useEffect(() => {
     if (!isAuthenticated) { router.push('/login'); return; }
     fetchNotifications();
     loadPublicRooms();
+
+    // Socket ile anlık oda güncellemesi
+    const { connectRoomSocket, getRoomSocket } = require('@/lib/socket');
+    connectRoomSocket();
+    const socket = getRoomSocket();
+    socketRef.current = socket;
+
+    // Biri oda oluşturduğunda/katıldığında/ayrıldığında güncelle
+    socket.on('room:updated', () => loadPublicRooms());
+    socket.on('room:closed', () => loadPublicRooms());
+
+    // 10 saniyede bir de yenile (socket bağlı değilse fallback)
+    const interval = setInterval(loadPublicRooms, 10000);
+    return () => {
+      clearInterval(interval);
+      socket.off('room:updated');
+      socket.off('room:closed');
+    };
   }, [isAuthenticated]);
 
   const loadPublicRooms = async () => {
