@@ -20,7 +20,7 @@ interface AdminRoom {
 }
 
 // Admin kullanıcı adları — değiştir
-const ADMIN_USERNAMES = ['admin', 'partyverse_admin'];
+const ADMIN_USERNAMES = ['admin', 'partyverse_admin', 'cemil1212'];
 
 export default function AdminPage() {
   const router = useRouter();
