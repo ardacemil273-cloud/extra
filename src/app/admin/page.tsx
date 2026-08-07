@@ -38,9 +38,7 @@ export default function AdminPage() {
     if (saved === 'yes') setAuthed(true);
   }, []);
 
-  useEffect(() => {
-    setBannerForm({ ...banner });
-  }, [banner]);
+  useEffect(() => { setBannerForm({ ...banner }); }, [banner]);
 
   useEffect(() => {
     if (!authed) return;
@@ -112,7 +110,6 @@ export default function AdminPage() {
       && (filter === 'all' || r.status === filter);
   });
 
-  // ─── GİRİŞ EKRANI ──────────────────────────────────────────
   if (!authed) {
     return (
       <div className="min-h-screen bg-[#080b14] text-white flex items-center justify-center px-4">
@@ -143,13 +140,12 @@ export default function AdminPage() {
     );
   }
 
-  // ─── ADMIN PANELİ ──────────────────────────────────────────
   return (
     <div className="min-h-screen bg-[#080b14] text-white">
       <div className="fixed inset-0 pointer-events-none">
         <div className="absolute top-0 right-1/3 w-96 h-96 bg-red-600/4 rounded-full blur-3xl" />
       </div>
-      {/* Header */}
+
       <header className="sticky top-0 z-50 border-b border-white/5 bg-[#080b14]/90 backdrop-blur-xl">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -173,20 +169,19 @@ export default function AdminPage() {
           </div>
         </div>
       </header>
+
       <main className="max-w-7xl mx-auto px-6 py-8 space-y-6">
-        {/* Tabs */}
         <div className="flex gap-1 p-1 rounded-xl bg-white/3 border border-white/5 w-fit">
-          {([['rooms','🏠 Odalar'], ['banner','📢 Discord Banner']] as [AdminTab, string][]).map(([id, label]) => (
-            <button key={id} onClick={() => setActiveTab(id)}
-              className={`px-5 py-2 rounded-lg text-sm font-semibold transition-all ${activeTab === id ? 'bg-white/10 text-white' : 'text-gray-500 hover:text-gray-300'}`}>
-              {label}
+          {(['rooms', 'banner'] as AdminTab[]).map((tab) => (
+            <button key={tab} onClick={() => setActiveTab(tab)}
+              className={`px-5 py-2 rounded-lg text-sm font-semibold transition-all ${activeTab === tab ? 'bg-white/10 text-white' : 'text-gray-500 hover:text-gray-300'}`}>
+              {tab === 'rooms' ? '🏠 Odalar' : '📢 Discord Banner'}
             </button>
           ))}
         </div>
 
-        {/* ─── ODALAR SEKMESİ ─── */}
         {activeTab === 'rooms' && (
-          <>
+          <div className="space-y-6">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {[
                 { label: 'Toplam Oda', value: stats.totalRooms, icon: '🏠', color: 'border-blue-500/20 bg-blue-500/5' },
@@ -201,11 +196,12 @@ export default function AdminPage() {
                 </div>
               ))}
             </div>
+
             <div className="flex flex-col sm:flex-row gap-3">
               <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Oda adı, kod veya host ara..."
                 className="flex-1 px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-600 focus:outline-none focus:border-purple-500 text-sm transition-all" />
               <div className="flex gap-2">
-                {(['all','WAITING','IN_GAME'] as const).map((f) => (
+                {(['all', 'WAITING', 'IN_GAME'] as const).map((f) => (
                   <button key={f} onClick={() => setFilter(f)}
                     className={`px-4 py-2 rounded-xl text-sm font-medium border transition-all ${filter === f ? 'border-purple-500 bg-purple-500/20 text-purple-300' : 'border-white/10 bg-white/3 text-gray-400 hover:border-white/20'}`}>
                     {f === 'all' ? 'Hepsi' : f === 'WAITING' ? '⏳ Bekliyor' : '🎮 Oyunda'}
@@ -213,13 +209,17 @@ export default function AdminPage() {
                 ))}
               </div>
             </div>
+
             <div className="rounded-2xl border border-white/8 bg-white/2 overflow-hidden">
               <div className="px-6 py-4 border-b border-white/5 flex items-center justify-between">
                 <h2 className="font-bold">Odalar ({filtered.length})</h2>
                 {loading && <span className="text-xs text-gray-500 animate-pulse">Güncelleniyor...</span>}
               </div>
               {filtered.length === 0 ? (
-                <div className="p-16 text-center"><div className="text-5xl mb-3">🏠</div><p className="text-gray-500 text-sm">{rooms.length === 0 ? 'Hiç oda yok' : 'Bulunamadı'}</p></div>
+                <div className="p-16 text-center">
+                  <div className="text-5xl mb-3">🏠</div>
+                  <p className="text-gray-500 text-sm">{rooms.length === 0 ? 'Hiç oda yok' : 'Bulunamadı'}</p>
+                </div>
               ) : (
                 <div className="divide-y divide-white/3">
                   <AnimatePresence>
@@ -259,108 +259,113 @@ export default function AdminPage() {
                 </div>
               )}
             </div>
-          </>
+          </div>
         )}
 
-        {/* ─── BANNER SEKMESİ ─── */}
         {activeTab === 'banner' && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Sol: Form */}
-            <div className="space-y-5">
-              <div className="rounded-2xl border border-white/8 bg-white/3 p-6">
-                <div className="flex items-center justify-between mb-5">
-                  <h2 className="font-black text-lg">📢 Discord Banner Ayarları</h2>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-gray-500">Aktif</span>
-                    <button onClick={() => setBannerForm((f) => ({ ...f, enabled: !f.enabled }))}
-                      className={`relative w-12 h-6 rounded-full transition-all ${bannerForm.enabled ? 'bg-green-500' : 'bg-white/10'}`}>
-                      <span className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-all ${bannerForm.enabled ? 'left-7' : 'left-1'}`} />
-                    </button>
-                  </div>
+            <div className="rounded-2xl border border-white/8 bg-white/3 p-6">
+              <div className="flex items-center justify-between mb-5">
+                <h2 className="font-black text-lg">📢 Discord Banner</h2>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-gray-500">Aktif</span>
+                  <button onClick={() => setBannerForm((f) => ({ ...f, enabled: !f.enabled }))}
+                    className={`relative w-12 h-6 rounded-full transition-all ${bannerForm.enabled ? 'bg-green-500' : 'bg-white/10'}`}>
+                    <span className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-all ${bannerForm.enabled ? 'left-7' : 'left-1'}`} />
+                  </button>
                 </div>
-                <div className="space-y-4">
+              </div>
+              <div className="space-y-4">
+                {[
+                  { label: 'Sunucu Adı *', key: 'serverName', placeholder: 'Örn: PartyVerse TR' },
+                  { label: 'Discord Davet Linki *', key: 'inviteUrl', placeholder: 'discord.gg/abc123' },
+                  { label: 'Açıklama', key: 'serverDescription', placeholder: 'Oyuncularla tanış!' },
+                  { label: 'Sunucu İkon URL', key: 'iconUrl', placeholder: 'https://cdn.discordapp.com/...' },
+                ].map((f) => (
+                  <div key={f.key}>
+                    <label className="block text-xs font-medium text-gray-400 mb-1">{f.label}</label>
+                    <input type="text" value={(bannerForm as any)[f.key]} placeholder={f.placeholder}
+                      onChange={(e) => setBannerForm((prev) => ({ ...prev, [f.key]: e.target.value }))}
+                      className="w-full px-3 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-600 focus:outline-none focus:border-purple-500 text-sm transition-all" />
+                  </div>
+                ))}
+                <div className="grid grid-cols-2 gap-3">
                   {[
-                    { label: 'Sunucu Adı *', key: 'serverName', placeholder: 'Örn: PartyVerse Türkiye', type: 'text' },
-                    { label: 'Discord Davet Linki *', key: 'inviteUrl', placeholder: 'discord.gg/abc123 veya https://discord.gg/abc123', type: 'text' },
-                    { label: 'Açıklama', key: 'serverDescription', placeholder: 'Oyuncularla tanış, takım kur!', type: 'text' },
-                    { label: 'Sunucu İkon URL (opsiyonel)', key: 'iconUrl', placeholder: 'https://cdn.discordapp.com/...', type: 'text' },
-                    { label: 'Çevrimiçi Üye Sayısı', key: 'onlineCount', placeholder: '0', type: 'number' },
-                    { label: 'Toplam Üye Sayısı', key: 'memberCount', placeholder: '0', type: 'number' },
+                    { label: 'Çevrimiçi Sayısı', key: 'onlineCount' },
+                    { label: 'Toplam Üye', key: 'memberCount' },
                   ].map((f) => (
                     <div key={f.key}>
                       <label className="block text-xs font-medium text-gray-400 mb-1">{f.label}</label>
-                      <input type={f.type} value={(bannerForm as any)[f.key]} placeholder={f.placeholder}
-                        onChange={(e) => setBannerForm((prev) => ({ ...prev, [f.key]: f.type === 'number' ? Number(e.target.value) : e.target.value }))}
-                        className="w-full px-3 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-600 focus:outline-none focus:border-purple-500 text-sm transition-all" />
+                      <input type="number" value={(bannerForm as any)[f.key]}
+                        onChange={(e) => setBannerForm((prev) => ({ ...prev, [f.key]: Number(e.target.value) }))}
+                        className="w-full px-3 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white focus:outline-none focus:border-purple-500 text-sm transition-all" />
                     </div>
                   ))}
-                  {/* Renk seçici */}
-                  <div>
-                    <label className="block text-xs font-medium text-gray-400 mb-1">Vurgu Rengi</label>
-                    <div className="flex items-center gap-3">
-                      <input type="color" value={bannerForm.accentColor}
-                        onChange={(e) => setBannerForm((f) => ({ ...f, accentColor: e.target.value }))}
-                        className="w-10 h-10 rounded-xl cursor-pointer border-0 bg-transparent" />
-                      <div className="flex gap-2">
-                        {['#5865F2', '#7289DA', '#9b59b6', '#e91e63', '#00b894', '#e67e22'].map((c) => (
-                          <button key={c} onClick={() => setBannerForm((f) => ({ ...f, accentColor: c }))}
-                            className={`w-7 h-7 rounded-lg border-2 transition-all ${bannerForm.accentColor === c ? 'border-white scale-110' : 'border-transparent'}`}
-                            style={{ backgroundColor: c }} />
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                  {/* Gösterim yerleri */}
-                  <div>
-                    <label className="block text-xs font-medium text-gray-400 mb-2">Gösterim Yerleri</label>
-                    <div className="space-y-2">
-                      {[
-                        { key: 'showOnLobby', label: '🎮 Lobby (Oda Bekleme)', desc: 'En çok vakit geçirilen yer' },
-                        { key: 'showOnDashboard', label: '🏠 Dashboard', desc: 'Ana sayfa sidebar' },
-                        { key: 'showOnGame', label: '⚔️ Oyun İçi', desc: 'Küçük banner şeklinde' },
-                      ].map((item) => (
-                        <label key={item.key} className="flex items-center justify-between p-3 rounded-xl border border-white/5 bg-white/2 cursor-pointer hover:bg-white/5 transition-all">
-                          <div>
-                            <p className="text-sm font-medium">{item.label}</p>
-                            <p className="text-xs text-gray-500">{item.desc}</p>
-                          </div>
-                          <button onClick={() => setBannerForm((f) => ({ ...f, [item.key]: !(f as any)[item.key] }))}
-                            className={`relative w-10 h-5 rounded-full transition-all flex-shrink-0 ${(bannerForm as any)[item.key] ? 'bg-green-500' : 'bg-white/10'}`}>
-                            <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all ${(bannerForm as any)[item.key] ? 'left-5' : 'left-0.5'}`} />
-                          </button>
-                        </label>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-400 mb-2">Vurgu Rengi</label>
+                  <div className="flex items-center gap-3">
+                    <input type="color" value={bannerForm.accentColor}
+                      onChange={(e) => setBannerForm((f) => ({ ...f, accentColor: e.target.value }))}
+                      className="w-10 h-10 rounded-xl cursor-pointer bg-transparent border-0" />
+                    <div className="flex gap-2">
+                      {['#5865F2', '#7289DA', '#9b59b6', '#e91e63', '#00b894', '#e67e22'].map((c) => (
+                        <button key={c} onClick={() => setBannerForm((f) => ({ ...f, accentColor: c }))}
+                          className={`w-7 h-7 rounded-lg border-2 transition-all ${bannerForm.accentColor === c ? 'border-white scale-110' : 'border-transparent'}`}
+                          style={{ backgroundColor: c }} />
                       ))}
                     </div>
                   </div>
                 </div>
-                <div className="flex gap-3 mt-6">
-                  <button onClick={handleSaveBanner}
-                    className={`flex-1 py-3 rounded-xl font-bold text-sm transition-all active:scale-95 ${bannerSaved ? 'bg-green-500 text-white' : 'bg-gradient-to-r from-purple-600 to-fuchsia-500 hover:from-purple-500 hover:to-fuchsia-400 text-white'}`}>
-                    {bannerSaved ? '✓ Kaydedildi!' : '💾 Kaydet'}
-                  </button>
-                  <button onClick={() => { resetBanner(); setBannerForm({ ...banner }); toast('Banner sıfırlandı'); }}
-                    className="px-4 py-3 rounded-xl border border-white/10 bg-white/5 text-gray-400 text-sm hover:bg-white/10 transition-all">
-                    Sıfırla
-                  </button>
+                <div>
+                  <label className="block text-xs font-medium text-gray-400 mb-2">Gösterim Yerleri</label>
+                  <div className="space-y-2">
+                    {[
+                      { key: 'showOnLobby', label: '🎮 Lobby', desc: 'En etkili yer — oyuncular 2-5dk bekler' },
+                      { key: 'showOnDashboard', label: '🏠 Dashboard', desc: 'Sol sidebar' },
+                      { key: 'showOnGame', label: '⚔️ Oyun İçi', desc: 'Kompakt bar' },
+                    ].map((item) => (
+                      <label key={item.key} className="flex items-center justify-between p-3 rounded-xl border border-white/5 bg-white/2 cursor-pointer hover:bg-white/5 transition-all">
+                        <div>
+                          <p className="text-sm font-medium">{item.label}</p>
+                          <p className="text-xs text-gray-500">{item.desc}</p>
+                        </div>
+                        <button onClick={() => setBannerForm((f) => ({ ...f, [item.key]: !(f as any)[item.key] }))}
+                          className={`relative w-10 h-5 rounded-full transition-all flex-shrink-0 ${(bannerForm as any)[item.key] ? 'bg-green-500' : 'bg-white/10'}`}>
+                          <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all ${(bannerForm as any)[item.key] ? 'left-5' : 'left-0.5'}`} />
+                        </button>
+                      </label>
+                    ))}
+                  </div>
                 </div>
               </div>
+              <div className="flex gap-3 mt-6">
+                <button onClick={handleSaveBanner}
+                  className={`flex-1 py-3 rounded-xl font-bold text-sm transition-all active:scale-95 ${bannerSaved ? 'bg-green-500 text-white' : 'bg-gradient-to-r from-purple-600 to-fuchsia-500 hover:from-purple-500 hover:to-fuchsia-400 text-white'}`}>
+                  {bannerSaved ? '✓ Kaydedildi!' : '💾 Kaydet'}
+                </button>
+                <button onClick={() => { resetBanner(); toast('Sıfırlandı'); }}
+                  className="px-4 py-3 rounded-xl border border-white/10 bg-white/5 text-gray-400 text-sm hover:bg-white/10 transition-all">
+                  Sıfırla
+                </button>
+              </div>
             </div>
-            {/* Sağ: Önizleme */}
+
             <div className="space-y-4">
               <div className="rounded-2xl border border-white/8 bg-white/3 p-5">
                 <h3 className="font-bold mb-4 text-sm text-gray-300">👁️ Önizleme — Lobby (Tam)</h3>
-                <DiscordBanner placement="lobby" key={JSON.stringify(bannerForm)} />
+                <DiscordBanner placement="lobby" />
                 {!bannerForm.enabled && (
-                  <p className="text-xs text-gray-600 text-center mt-2">Banner devre dışı — Aktif et butonunu aç</p>
+                  <p className="text-xs text-gray-600 text-center mt-2">Banner kapalı — üstteki toggle'ı aç</p>
                 )}
               </div>
               <div className="rounded-2xl border border-white/8 bg-white/3 p-5">
                 <h3 className="font-bold mb-4 text-sm text-gray-300">👁️ Önizleme — Oyun İçi (Kompakt)</h3>
-                <DiscordBanner placement="game" compact key={JSON.stringify(bannerForm) + 'compact'} />
+                <DiscordBanner placement="game" compact />
               </div>
               <div className="rounded-2xl border border-yellow-500/20 bg-yellow-500/5 p-4">
                 <p className="text-xs text-yellow-400 font-semibold mb-1">💡 İpucu</p>
-                <p className="text-xs text-gray-400">Lobby bekleme ekranı en etkili yer — oyuncular ortalama 2-5 dakika lobby'de bekliyor. Banner kaydedilir kaydedilmez tüm kullanıcılara anında görünür (localStorage).</p>
+                <p className="text-xs text-gray-400">Banner kaydedilince anında tüm kullanıcılara görünür. Lobby bekleme ekranı en etkili yer — oyuncular ortalama 2-5 dk bekliyor.</p>
               </div>
             </div>
           </div>

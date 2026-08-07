@@ -322,10 +322,10 @@ export default function LobbyPage() {
 
             {/* Chat */}
             <div className="flex flex-col rounded-2xl border border-white/8 bg-white/3 overflow-hidden" style={{ height: '55vh' }}>
-            <div className="px-4 py-3 border-b border-white/5 flex items-center gap-2">
-              <span className="text-sm font-semibold">💬 Sohbet</span>
-              <span className="text-xs text-gray-600">{chatMessages.length}</span>
-            </div>
+              <div className="px-4 py-3 border-b border-white/5 flex items-center gap-2">
+                <span className="text-sm font-semibold">💬 Sohbet</span>
+                <span className="text-xs text-gray-600">{chatMessages.length}</span>
+              </div>
 
             <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2">
               {chatMessages.length === 0 && (
