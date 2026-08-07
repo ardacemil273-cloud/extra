@@ -7,6 +7,7 @@ import { useRoomStore } from '@/stores/room.store';
 import { getRoomSocket, connectRoomSocket } from '@/lib/socket';
 import Navbar from '@/components/layout/Navbar';
 import VoicePanel from '@/components/voice/VoicePanel';
+import DiscordBanner from '@/components/banner/DiscordBanner';
 import api from '@/lib/api';
 import toast from 'react-hot-toast';
 import { Room, ChatMessage, GAME_TYPES } from '@/types';
@@ -311,8 +312,11 @@ export default function LobbyPage() {
             </div>
           </div>
 
-          {/* Chat */}
+          {/* Chat + Voice + Banner */}
           <div className="lg:col-span-1 space-y-4">
+            {/* Discord Banner — lobby'de en çok vakit geçirilen yer */}
+            <DiscordBanner placement="lobby" />
+
             {/* Voice Panel */}
             {user?.id && <VoicePanel roomId={roomId} userId={user.id} />}
 

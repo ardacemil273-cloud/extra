@@ -6,7 +6,7 @@ import { motion } from 'framer-motion';
 import { useAuthStore } from '@/stores/auth.store';
 import toast from 'react-hot-toast';
 
-const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1';
+const API_BASE = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1').replace('/api/v1', '');
 
 export default function LoginPage() {
   const router = useRouter();
@@ -25,11 +25,13 @@ export default function LoginPage() {
   };
 
   const handleGoogle = () => {
-    window.location.href = `${API}/auth/google`;
+    const base = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1').replace('/api/v1', '');
+    window.location.href = `${base}/api/v1/auth/google`;
   };
 
   const handleDiscord = () => {
-    window.location.href = `${API}/auth/discord`;
+    const base = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1').replace('/api/v1', '');
+    window.location.href = `${base}/api/v1/auth/discord`;
   };
 
   return (

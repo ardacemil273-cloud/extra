@@ -7,6 +7,7 @@ import { useAuthStore } from '@/stores/auth.store';
 import { useNotificationsStore } from '@/stores/notifications.store';
 import { calculateLevelProgress } from '@/lib/utils';
 import Navbar from '@/components/layout/Navbar';
+import DiscordBanner from '@/components/banner/DiscordBanner';
 import api from '@/lib/api';
 import toast from 'react-hot-toast';
 import { GAME_TYPES } from '@/types';
@@ -160,6 +161,9 @@ export default function DashboardPage() {
                 <span className="text-xs font-bold">Odaya Katıl</span>
               </Link>
             </div>
+
+            {/* Discord Banner */}
+            <DiscordBanner placement="dashboard" />
 
             {/* Kod ile katıl */}
             <div className="rounded-2xl border border-white/8 bg-white/3 p-4">

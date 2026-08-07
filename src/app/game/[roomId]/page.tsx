@@ -8,6 +8,7 @@ import { getGameSocket, connectGameSocket } from '@/lib/socket';
 import { ROLE_CONFIG, GamePlayer, VampireRole } from '@/types';
 import toast from 'react-hot-toast';
 import VoicePanel from '@/components/voice/VoicePanel';
+import DiscordBanner from '@/components/banner/DiscordBanner';
 
 export default function GamePage() {
   const { roomId } = useParams<{ roomId: string }>();
@@ -387,6 +388,9 @@ export default function GamePage() {
             {!isNight && user?.id && (
               <VoicePanel roomId={roomId} userId={user.id} />
             )}
+
+            {/* Discord Banner — compact, oyun arası */}
+            <DiscordBanner placement="game" compact />
 
             {/* Chat */}
             <div className="flex-1 flex flex-col rounded-2xl border border-white/8 bg-white/2 overflow-hidden min-h-0">
