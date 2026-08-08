@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>🎮 Konsantrasyon Testi - Gözlerini Kırpmadan İzle!</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: #000;
+      color: #fff;
+      font-family: 'Courier New', monospace;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      user-select: none;
+    }
+
+    #intro {
+      text-align: center;
+      animation: fadeIn 1s ease;
+    }
+
+    #intro h1 {
+      font-size: 2.5rem;
+      color: #00ff88;
+      text-shadow: 0 0 20px #00ff88;
+      margin-bottom: 1rem;
+    }
+
+    #intro p {
+      color: #aaa;
+      font-size: 1.1rem;
+      margin-bottom: 2rem;
+      line-height: 1.8;
+    }
+
+    #intro .warning {
+      color: #ffcc00;
+      font-size: 0.9rem;
+      margin-bottom: 2rem;
+      border: 1px solid #ffcc00;
+      padding: 10px 20px;
+      border-radius: 8px;
+    }
+
+    #startBtn {
+      background: linear-gradient(135deg, #7c3aed, #a855f7);
+      border: none;
+      color: white;
+      padding: 16px 48px;
+      font-size: 1.2rem;
+      font-family: 'Courier New', monospace;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+      letter-spacing: 2px;
+    }
+
+    #startBtn:hover {
+      transform: scale(1.05);
+      box-shadow: 0 0 30px rgba(168,85,247,0.5);
+    }
+
+    /* ── OYUN EKRANI ── */
+    #game {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: 100%;
+    }
+
+    #instructions {
+      font-size: 1.3rem;
+      color: #00ff88;
+      margin-bottom: 2rem;
+      text-align: center;
+      text-shadow: 0 0 10px #00ff88;
+    }
+
+    #dotContainer {
+      position: relative;
+      width: 500px;
+      height: 500px;
+      border: 2px solid #1a1a1a;
+      border-radius: 16px;
+      background: #050505;
+      overflow: hidden;
+    }
+
+    #dot {
+      position: absolute;
+      width: 18px;
+      height: 18px;
+      background: #ff4444;
+      border-radius: 50%;
+      box-shadow: 0 0 12px #ff4444;
+      transition: all 0.08s linear;
+      cursor: none;
+    }
+
+    #timerBar {
+      width: 500px;
+      height: 8px;
+      background: #1a1a1a;
+      border-radius: 4px;
+      margin-top: 20px;
+      overflow: hidden;
+    }
+
+    #timerFill {
+      height: 100%;
+      background: linear-gradient(90deg, #00ff88, #ffcc00, #ff4444);
+      border-radius: 4px;
+      transition: width 0.1s linear;
+      width: 100%;
+    }
+
+    #score {
+      margin-top: 16px;
+      font-size: 1rem;
+      color: #555;
+      letter-spacing: 2px;
+    }
+
+    /* ── JUMPSCARE ── */
+    #jumpscare {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      background: #000;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+    }
+
+    #jumpscareImg {
+      font-size: 12rem;
+      animation: shake 0.1s infinite, flashRed 0.15s infinite;
+    }
+
+    #jumpscareText {
+      font-size: 4rem;
+      font-weight: black;
+      color: #ff0000;
+      text-shadow: 0 0 40px #ff0000, 0 0 80px #ff0000;
+      animation: shake 0.08s infinite;
+      margin-top: 1rem;
+      letter-spacing: 4px;
+    }
+
+    #jumpscareSubtext {
+      font-size: 1.5rem;
+      color: #ff6666;
+      margin-top: 1rem;
+      animation: fadeIn 0.5s ease 1s both;
+    }
+
+    /* ── SONUÇ ── */
+    #result {
+      display: none;
+      text-align: center;
+      animation: fadeIn 0.5s ease;
+    }
+
+    #result h2 {
+      font-size: 2rem;
+      margin-bottom: 1rem;
+    }
+
+    #result p {
+      color: #aaa;
+      margin-bottom: 2rem;
+      font-size: 1.1rem;
+    }
+
+    #retryBtn {
+      background: #1a1a1a;
+      border: 1px solid #333;
+      color: white;
+      padding: 12px 36px;
+      font-size: 1rem;
+      font-family: 'Courier New', monospace;
+      border-radius: 8px;
+      cursor: pointer;
+      margin: 0 8px;
+      transition: all 0.2s;
+    }
+
+    #retryBtn:hover { border-color: #7c3aed; color: #a855f7; }
+
+    #shareBtn {
+      background: linear-gradient(135deg, #5865F2, #7289DA);
+      border: none;
+      color: white;
+      padding: 12px 36px;
+      font-size: 1rem;
+      font-family: 'Courier New', monospace;
+      border-radius: 8px;
+      cursor: pointer;
+      margin: 0 8px;
+      transition: all 0.2s;
+    }
+
+    #shareBtn:hover { transform: scale(1.05); }
+
+    /* ── ANİMASYONLAR ── */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes shake {
+      0%, 100% { transform: translate(0, 0) rotate(0deg); }
+      10% { transform: translate(-8px, -5px) rotate(-2deg); }
+      20% { transform: translate(8px, 5px) rotate(2deg); }
+      30% { transform: translate(-6px, 8px) rotate(-1deg); }
+      40% { transform: translate(6px, -8px) rotate(1deg); }
+      50% { transform: translate(-4px, 5px) rotate(-2deg); }
+      60% { transform: translate(4px, -5px) rotate(2deg); }
+      70% { transform: translate(-8px, 3px) rotate(-1deg); }
+      80% { transform: translate(8px, -3px) rotate(1deg); }
+      90% { transform: translate(-2px, 6px) rotate(-2deg); }
+    }
+
+    @keyframes flashRed {
+      0%, 49% { filter: hue-rotate(0deg) saturate(5) brightness(1.5); }
+      50%, 100% { filter: hue-rotate(30deg) saturate(3) brightness(2); }
+    }
+
+    @keyframes redFlashBg {
+      0%, 49% { background: #000; }
+      50%, 100% { background: #1a0000; }
+    }
+
+    .red-flash { animation: redFlashBg 0.15s infinite; }
+  </style>
+</head>
+<body>
+
+  <!-- INTRO -->
+  <div id="intro">
+    <h1>🎯 KONSANTRASYON TESTİ</h1>
+    <p>
+      Kırmızı noktayı mümkün olduğunca uzun süre takip et.<br/>
+      Gözlerini kırpma. Konsantrasyonunu koru.<br/>
+      <strong style="color:#ff4444">Sadece 30 saniye!</strong>
+    </p>
+    <div class="warning">
+      ⚠️ Epilepsi uyarısı: Hızlı yanıp sönen ışıklar içerir.
+    </div>
+    <button id="startBtn" onclick="startGame()">▶ BAŞLA</button>
+  </div>
+
+  <!-- OYUN -->
+  <div id="game">
+    <div id="instructions">Kırmızı noktayı gözlerinle takip et...</div>
+    <div id="dotContainer">
+      <div id="dot"></div>
+    </div>
+    <div id="timerBar">
+      <div id="timerFill"></div>
+    </div>
+    <div id="score">SÜRE: <span id="timeLeft">30</span>s &nbsp;|&nbsp; TAKIP: <span id="trackScore">0</span></div>
+  </div>
+
+  <!-- JUMPSCARE -->
+  <div id="jumpscare">
+    <div id="jumpscareImg">👹</div>
+    <div id="jumpscareText">BOO!!!</div>
+    <div id="jumpscareSubtext">Korkuttum mu? 😈</div>
+  </div>
+
+  <!-- SONUÇ -->
+  <div id="result">
+    <h2 id="resultTitle"></h2>
+    <p id="resultDesc"></p>
+    <div>
+      <button id="retryBtn" onclick="reset()">🔄 Tekrar Dene</button>
+      <button id="shareBtn" onclick="shareResult()">📢 Arkadaşlara Gönder</button>
+    </div>
+  </div>
+
+  <audio id="screamAudio" preload="auto">
+    <!-- Base64 encoded short beep as fallback -->
+  </audio>
+
+  <script>
+    const GAME_DURATION = 30; // saniye
+    const JUMPSCARE_DELAY_MIN = 8;  // en erken kaç saniyede
+    const JUMPSCARE_DELAY_MAX = 25; // en geç kaç saniyede
+
+    let gameInterval = null;
+    let dotInterval = null;
+    let timeLeft = GAME_DURATION;
+    let trackScore = 0;
+    let jumpscareTriggered = false;
+    let jumpscareTimeout = null;
+
+    const emojis = ['👹', '🎃', '💀', '👻', '😱', '🙀', '👁️'];
+    const messages = [
+      'BOO!!!', 'AAAAAH!!!', 'GÖRDÜM SENİ!!!', 'ARKANDA!!!', 'KAÇAMAZSIN!!!'
+    ];
+
+    function startGame() {
+      document.getElementById('intro').style.display = 'none';
+      const game = document.getElementById('game');
+      game.style.display = 'flex';
+
+      timeLeft = GAME_DURATION;
+      trackScore = 0;
+      jumpscareTriggered = false;
+
+      // Dot hareketi
+      moveDot();
+      dotInterval = setInterval(moveDot, 600);
+
+      // Sayaç
+      gameInterval = setInterval(() => {
+        timeLeft--;
+        document.getElementById('timeLeft').textContent = timeLeft;
+        const pct = (timeLeft / GAME_DURATION) * 100;
+        document.getElementById('timerFill').style.width = pct + '%';
+        trackScore += Math.floor(Math.random() * 3) + 1;
+        document.getElementById('trackScore').textContent = trackScore;
+
+        if (timeLeft <= 0) {
+          clearInterval(gameInterval);
+          clearInterval(dotInterval);
+          clearTimeout(jumpscareTimeout);
+          showResult(true);
+        }
+      }, 1000);
+
+      // Jumpscare zamanı — rastgele
+      const delay = (Math.random() * (JUMPSCARE_DELAY_MAX - JUMPSCARE_DELAY_MIN) + JUMPSCARE_DELAY_MIN) * 1000;
+      jumpscareTimeout = setTimeout(() => {
+        if (!jumpscareTriggered) triggerJumpscare();
+      }, delay);
+    }
+
+    function moveDot() {
+      const container = document.getElementById('dotContainer');
+      const dot = document.getElementById('dot');
+      const maxX = container.clientWidth - 22;
+      const maxY = container.clientHeight - 22;
+      const x = Math.random() * maxX;
+      const y = Math.random() * maxY;
+      dot.style.left = x + 'px';
+      dot.style.top = y + 'px';
+    }
+
+    function triggerJumpscare() {
+      jumpscareTriggered = true;
+      clearInterval(gameInterval);
+      clearInterval(dotInterval);
+
+      const js = document.getElementById('jumpscare');
+      const img = document.getElementById('jumpscareImg');
+      const text = document.getElementById('jumpscareText');
+
+      img.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+      text.textContent = messages[Math.floor(Math.random() * messages.length)];
+
+      // Ses efekti — Web Audio API ile ani tiz ses
+      playScream();
+
+      js.style.display = 'flex';
+      js.classList.add('red-flash');
+      document.getElementById('game').style.display = 'none';
+
+      // 3 saniye sonra sonuç ekranı
+      setTimeout(() => {
+        js.style.display = 'none';
+        js.classList.remove('red-flash');
+        showResult(false);
+      }, 3000);
+    }
+
+    function playScream() {
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+
+        // Ani yüksek frekanslı ses — gerçek scream efekti
+        const osc1 = ctx.createOscillator();
+        const osc2 = ctx.createOscillator();
+        const gainNode = ctx.createGain();
+
+        osc1.type = 'sawtooth';
+        osc2.type = 'square';
+
+        osc1.frequency.setValueAtTime(800, ctx.currentTime);
+        osc1.frequency.exponentialRampToValueAtTime(200, ctx.currentTime + 0.8);
+
+        osc2.frequency.setValueAtTime(1200, ctx.currentTime);
+        osc2.frequency.exponentialRampToValueAtTime(100, ctx.currentTime + 0.6);
+
+        gainNode.gain.setValueAtTime(0.8, ctx.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 1);
+
+        osc1.connect(gainNode);
+        osc2.connect(gainNode);
+        gainNode.connect(ctx.destination);
+
+        osc1.start(ctx.currentTime);
+        osc2.start(ctx.currentTime);
+        osc1.stop(ctx.currentTime + 1);
+        osc2.stop(ctx.currentTime + 1);
+      } catch (e) {
+        // Ses çalamadıysa geç
+      }
+    }
+
+    function showResult(survived) {
+      document.getElementById('game').style.display = 'none';
+      const result = document.getElementById('result');
+      result.style.display = 'block';
+
+      if (survived) {
+        document.getElementById('resultTitle').innerHTML = '🏆 DAYANDIN!';
+        document.getElementById('resultTitle').style.color = '#00ff88';
+        document.getElementById('resultDesc').innerHTML =
+          `${GAME_DURATION} saniyeyi atlattın!<br/>Konsantrasyon skoru: <strong style="color:#00ff88">${trackScore}</strong> puan<br/><br/>Arkadaşlarına gönder, bakalım onlar da dayanabilecek mi? 😏`;
+      } else {
+        document.getElementById('resultTitle').innerHTML = '😂 KORKTU!!!';
+        document.getElementById('resultTitle').style.color = '#ff4444';
+        document.getElementById('resultDesc').innerHTML =
+          `${GAME_DURATION - timeLeft} saniyede korktun!<br/>Konsantrasyon skoru: <strong style="color:#ffcc00">${trackScore}</strong> puan<br/><br/>Bunu arkadaşlarına yolla da onlar da denesin! 😈`;
+      }
+    }
+
+    function reset() {
+      document.getElementById('result').style.display = 'none';
+      document.getElementById('jumpscare').style.display = 'none';
+      document.getElementById('intro').style.display = 'block';
+      clearInterval(gameInterval);
+      clearInterval(dotInterval);
+      clearTimeout(jumpscareTimeout);
+    }
+
+    function shareResult() {
+      const url = window.location.href;
+      const text = `🎯 Konsantrasyon testini yaptım! Sen de dene — dayanabilecek misin? ${url}`;
+      if (navigator.share) {
+        navigator.share({ title: 'Konsantrasyon Testi', text, url });
+      } else if (navigator.clipboard) {
+        navigator.clipboard.writeText(url).then(() => alert('Link kopyalandı! Arkadaşlara gönder 😈'));
+      } else {
+        prompt('Bu linki kopyala ve arkadaşlarına gönder:', url);
+      }
+    }
+
+    // Keyboard: Escape ile çıkış
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') reset();
+    });
+  </script>
+</body>
+</html>
