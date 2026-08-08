@@ -171,10 +171,37 @@ export class RoomsService {
     const room = await this.prisma.room.findUnique({ where: { id: roomId } });
     if (!room) throw new NotFoundException('Oda bulunamadı');
     if (room.hostId !== hostId) throw new ForbiddenException('Sadece host oyun seçebilir');
-
     return this.prisma.room.update({
       where: { id: roomId },
       data: { gameType },
+      include: this.getRoomInclude(),
+    });
+  }
+
+  async updateSettings(hostId: string, roomId: string, settings: {
+    maxPlayers?: number;
+    gameSettings?: Record<string, unknown>;
+  }) {
+    const room = await this.prisma.room.findUnique({ where: { id: roomId } });
+    if (!room) throw new NotFoundException('Oda bulunamadı');
+    if (room.hostId !== hostId) throw new ForbiddenException('Sadece host ayar değiştirebilir');
+
+    const data: Record<string, unknown> = {};
+    if (settings.maxPlayers !== undefined) {
+      if (settings.maxPlayers < 4 || settings.maxPlayers > 20)
+        throw new BadRequestException('Oyuncu sayısı 4-20 arasında olmalı');
+      const currentPlayers = await this.prisma.roomPlayer.count({ where: { roomId } });
+      if (settings.maxPlayers < currentPlayers)
+        throw new BadRequestException('Mevcut oyuncu sayısından az olamaz');
+      data.maxPlayers = settings.maxPlayers;
+    }
+    if (settings.gameSettings !== undefined) {
+      data.settings = settings.gameSettings;
+    }
+
+    return this.prisma.room.update({
+      where: { id: roomId },
+      data,
       include: this.getRoomInclude(),
     });
   }

@@ -7,6 +7,7 @@ import { useGameStore } from '@/stores/game.store';
 import { getGameSocket, connectGameSocket } from '@/lib/socket';
 import { ROLE_CONFIG, VampireRole, GamePlayer } from '@/types';
 import toast from 'react-hot-toast';
+import { narrate, stopNarrator } from '@/lib/narrator';
 
 const phaseLabel: Record<string, string> = {
   NIGHT: '🌙 Gece', DAY_ANNOUNCEMENT: '☀️ Sabah',
@@ -67,12 +68,18 @@ export default function GamePage() {
     });
     socket.on('game:phase-change', ({ phase, narrator, duration }: any) => {
       if (gameState) setGameState({ ...gameState, phase });
-      if (narrator) addNarratorMessage({ id: Date.now().toString(), message: narrator, type: phase, timestamp: Date.now() });
+      if (narrator) {
+        addNarratorMessage({ id: Date.now().toString(), message: narrator, type: phase, timestamp: Date.now() });
+        narrate(narrator).catch(() => {});
+      }
       if (duration) startTimer(duration);
       setMyTurn(false); setSelectedTarget(null);
     });
-    socket.on('game:narrator', ({ message, type }: any) =>
-      addNarratorMessage({ id: Date.now().toString(), message, type, timestamp: Date.now() }));
+    socket.on('game:narrator', ({ message, type }: any) => {
+      addNarratorMessage({ id: Date.now().toString(), message, type, timestamp: Date.now() });
+      // AI ile sesli anlat
+      narrate(message).catch(() => {});
+    });
     socket.on('game:night-role', ({ activeRole, narrator }: any) => {
       setNightActiveRole(activeRole);
       if (narrator) addNarratorMessage({ id: Date.now().toString(), message: narrator, type: 'night', timestamp: Date.now() });
@@ -89,8 +96,14 @@ export default function GamePage() {
     socket.on('game:morning', ({ deaths, narrator, deathAnnouncement }: any) => {
       setMorningDeaths(deaths || []);
       setNightActiveRole(null); setMyTurn(false);
-      if (narrator) addNarratorMessage({ id: Date.now().toString(), message: narrator, type: 'morning', timestamp: Date.now() });
-      if (deathAnnouncement) addNarratorMessage({ id: (Date.now()+1).toString(), message: deathAnnouncement, type: 'death', timestamp: Date.now()+1 });
+      if (narrator) {
+        addNarratorMessage({ id: Date.now().toString(), message: narrator, type: 'morning', timestamp: Date.now() });
+        narrate(narrator).catch(() => {});
+      }
+      if (deathAnnouncement) {
+        addNarratorMessage({ id: (Date.now()+1).toString(), message: deathAnnouncement, type: 'death', timestamp: Date.now()+1 });
+        setTimeout(() => narrate(deathAnnouncement).catch(() => {}), 2500);
+      }
     });
     socket.on('game:vote-update', ({ players }: any) => {
       if (gameState) setGameState({ ...gameState, players: { ...gameState.players, ...players } });
@@ -101,11 +114,14 @@ export default function GamePage() {
     });
     socket.on('game:over', (result: any) => {
       setGameResult(result);
-      if (result.narrator) addNarratorMessage({ id: Date.now().toString(), message: result.narrator, type: 'game_over', timestamp: Date.now() });
+      if (result.narrator) {
+        addNarratorMessage({ id: Date.now().toString(), message: result.narrator, type: 'game_over', timestamp: Date.now() });
+        narrate(result.narrator).catch(() => {});
+      }
     });
     socket.on('game:chat', (msg: any) => addChatMessage(msg));
     socket.on('game:error', ({ message }: any) => toast.error(message));
-    return () => { socket.off(); if (timerRef.current) clearInterval(timerRef.current); reset(); };
+    return () => { socket.off(); if (timerRef.current) clearInterval(timerRef.current); stopNarrator(); reset(); };
   }, [roomId]);
 
   useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);

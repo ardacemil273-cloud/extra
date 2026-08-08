@@ -34,6 +34,14 @@ export default function DashboardPage() {
     loadFriends();
     // Her 8 saniyede otomatik yenile
     intervalRef.current = setInterval(loadPublicRooms, 8000);
+    // Socket ile anlık güncelleme
+    import('@/lib/socket').then(({ connectRoomSocket, getRoomSocket }) => {
+      connectRoomSocket();
+      const s = getRoomSocket();
+      s.on('room:updated', loadPublicRooms);
+      s.on('room:closed', loadPublicRooms);
+      s.on('room:joined', loadPublicRooms);
+    });
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
   }, [isAuthenticated]);
 

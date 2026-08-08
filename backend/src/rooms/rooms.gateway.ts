@@ -183,21 +183,30 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
-  @SubscribeMessage('room:select-game')
-  async handleSelectGame(
-    @ConnectedSocket() client: Socket,
-    @MessageBody() data: { roomId: string; gameType: string },
-  ) {
-    const userId = client.data.userId;
-    if (!userId) return;
+    socket.on('room:select-game', async (data: { roomId: string; gameType: string }) => {
+      try {
+        const room = await this.roomsService.selectGame(userId, data.roomId, data.gameType);
+        this.server.to(`room:${data.roomId}`).emit('room:updated', room);
+      } catch (err) {
+        client.emit('room:error', { message: err.message });
+      }
+    });
 
-    try {
-      const room = await this.roomsService.selectGame(userId, data.roomId, data.gameType);
-      this.server.to(`room:${data.roomId}`).emit('room:updated', room);
-    } catch (err) {
-      client.emit('room:error', { message: err.message });
-    }
-  }
+    socket.on('room:update-settings', async (data: { roomId: string; maxPlayers?: number; gameSettings?: Record<string, unknown> }) => {
+      try {
+        const room = await this.roomsService.updateSettings(userId, data.roomId, {
+          maxPlayers: data.maxPlayers,
+          gameSettings: data.gameSettings,
+        });
+        this.server.to(`room:${data.roomId}`).emit('room:updated', room);
+        this.server.to(`room:${data.roomId}`).emit('room:settings-updated', {
+          maxPlayers: room.maxPlayers,
+          settings: room.settings,
+        });
+      } catch (err) {
+        client.emit('room:error', { message: err.message });
+      }
+    });
 
   @SubscribeMessage('lobby:chat')
   handleChat(
