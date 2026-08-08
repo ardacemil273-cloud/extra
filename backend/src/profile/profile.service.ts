@@ -109,7 +109,24 @@ export class ProfileService {
     return true;
   }
 
-  getAvatarOptions() {
+getAvatarOptions() {
     return AVATAR_OPTIONS;
+  }
+
+  async getGameHistory(userId: string, page = 1, limit = 20) {
+    const skip = (page - 1) * limit;
+    const [history, total] = await Promise.all([
+      this.prisma.gameHistory.findMany({
+        where: { userId },
+        orderBy: { playedAt: 'desc' },
+        skip,
+        take: limit,
+        include: {
+          match: { select: { id: true, gameType: true, duration: true, winnerTeam: true, endedAt: true } },
+        },
+      }),
+      this.prisma.gameHistory.count({ where: { userId } }),
+    ]);
+    return { history, total, page, limit };
   }
 }

@@ -5,7 +5,14 @@ export type GamePhase =
   | 'DAY_DISCUSSION'
   | 'DAY_VOTING'
   | 'VOTE_RESULT'
-  | 'GAME_OVER';
+  | 'GAME_OVER'
+  | 'COUNTDOWN'
+  | 'PLAYING'
+  | 'DRESSING'
+  | 'RUNWAY'
+| 'ROUND_RESULT'
+  | 'SERVING'
+  | 'BOX_REVEAL';
 
 export type PlayerStatus = 'ALIVE' | 'DEAD' | 'SPECTATOR';
 

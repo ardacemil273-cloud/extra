@@ -187,3 +187,52 @@ body {
   background:radial-gradient(ellipse at 50% 0%,rgba(139,0,0,.06) 0%,transparent 60%);
   pointer-events:none;
 }
+
+/* ── COZY PASTEL UTILITIES (Phase 7) ── */
+@keyframes water-ripple { 0%{transform:scale(.6);opacity:.9} 100%{transform:scale(2);opacity:0} }
+@keyframes confetti-fall { 0%{transform:translateY(-10vh) rotate(0)} 100%{transform:translateY(110vh) rotate(720deg)} }
+@keyframes bounce-soft { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
+@keyframes pop-in { 0%{transform:scale(.5);opacity:0} 100%{transform:scale(1);opacity:1} }
+@keyframes shimmer-pastel { 0%{background-position:-200% center} 100%{background-position:200% center} }
+
+.animate-water-ripple { animation:water-ripple 1.2s ease-out forwards; }
+.animate-confetti { animation:confetti-fall linear infinite; }
+.animate-bounce-soft { animation:bounce-soft 1.6s ease-in-out infinite; }
+.animate-pop-in { animation:pop-in .35s cubic-bezier(.34,1.56,.64,1) forwards; }
+
+.pastel-bg {
+  background:linear-gradient(160deg,#fff0f5 0%,#fdf6ff 40%,#f0f7ff 100%);
+}
+.pastel-card {
+  background:rgba(255,255,255,.75);
+  border:1px solid rgba(255,182,193,.4);
+  box-shadow:0 8px 24px rgba(255,182,193,.25);
+  backdrop-filter:blur(8px);
+}
+.pastel-btn {
+  background:linear-gradient(135deg,#ffb6c1,#ffd1dc);
+  color:#7a3b4a;
+  border:none;
+  box-shadow:0 4px 14px rgba(255,182,193,.4);
+  transition:all .2s;
+}
+.pastel-btn:hover { transform:translateY(-2px); box-shadow:0 6px 18px rgba(255,182,193,.55); }
+.pastel-chip {
+  background:rgba(255,255,255,.7);
+  border:1px solid rgba(186,152,255,.3);
+  color:#7c5cbf;
+}
+.pastel-text-gold {
+  background:linear-gradient(135deg,#f59e0b,#fcd34d);
+  -webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;
+  background-clip:text;
+}
+.pastel-shimmer {
+  background:linear-gradient(90deg,#ffb6c1 0%,#fff 50%,#c3b1ff 100%);
+  background-size:200% auto;
+  -webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;
+  background-clip:text;
+  animation:shimmer-pastel 3s linear infinite;
+}

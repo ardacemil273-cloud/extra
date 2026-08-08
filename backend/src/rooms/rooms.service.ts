@@ -153,6 +153,34 @@ export class RoomsService {
     return { kicked: true };
   }
 
+async transferHost(hostId: string, roomId: string, targetUserId: string) {
+    const room = await this.prisma.room.findUnique({
+      where: { id: roomId },
+      include: { players: true },
+    });
+    if (!room) throw new NotFoundException('Oda bulunamadı');
+    if (room.hostId !== hostId) throw new ForbiddenException('Sadece host yetki devredebilir');
+    if (!room.players.some((p) => p.userId === targetUserId)) {
+      throw new BadRequestException('Hedef oyuncu odada değil');
+    }
+
+    await this.prisma.room.update({
+      where: { id: roomId },
+      data: { hostId: targetUserId },
+    });
+
+    await this.prisma.roomPlayer.updateMany({
+      where: { roomId, userId: hostId },
+      data: { isHost: false },
+    });
+    await this.prisma.roomPlayer.updateMany({
+      where: { roomId, userId: targetUserId },
+      data: { isHost: true },
+    });
+
+    return this.getRoomById(roomId);
+  }
+
   async closeRoom(hostId: string, roomId: string) {
     const room = await this.prisma.room.findUnique({ where: { id: roomId } });
     if (!room) throw new NotFoundException('Oda bulunamadı');
@@ -224,13 +252,41 @@ export class RoomsService {
     return room;
   }
 
-  async getPublicRooms() {
+async getPublicRooms() {
     return this.prisma.room.findMany({
       where: { isPrivate: false, status: RoomStatus.WAITING },
       include: this.getRoomInclude(),
       orderBy: { createdAt: 'desc' },
       take: 20,
     });
+  }
+
+  async rematch(roomId: string) {
+    const room = await this.prisma.room.findUnique({
+      where: { id: roomId },
+      include: { players: true },
+    });
+
+    if (!room) throw new NotFoundException('Oda bulunamadı');
+
+    // Oyuncuları hazır değil durumuna çevir, odayı WAITING yap
+    await this.prisma.room.update({
+      where: { id: roomId },
+      data: { status: RoomStatus.WAITING },
+    });
+
+    await this.prisma.roomPlayer.updateMany({
+      where: { roomId },
+      data: { isReady: false },
+    });
+
+    // Host hazır kalsın
+    await this.prisma.roomPlayer.updateMany({
+      where: { roomId, userId: room.hostId },
+      data: { isReady: true },
+    });
+
+    return this.getRoomById(roomId);
   }
 
   private generateRoomCode(): string {

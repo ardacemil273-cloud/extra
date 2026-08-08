@@ -44,9 +44,15 @@ export class RoomsController {
     return this.roomsService.getRoomById(id);
   }
 
-  @Delete(':id/leave')
+@Delete(':id/leave')
   @HttpCode(HttpStatus.OK)
   async leaveRoom(@CurrentUser('id') userId: string, @Param('id') roomId: string) {
     return this.roomsService.leaveRoom(userId, roomId);
+  }
+
+  @Post(':id/rematch')
+  @HttpCode(HttpStatus.OK)
+  async rematch(@Param('id') roomId: string) {
+    return this.roomsService.rematch(roomId);
   }
 }

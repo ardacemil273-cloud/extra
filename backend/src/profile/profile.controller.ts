@@ -1,4 +1,4 @@
-import { Controller, Get, Patch, Body, Param, UseGuards } from '@nestjs/common';
+import { Controller, Get, Patch, Body, Param, Query, UseGuards } from '@nestjs/common';
 import { ProfileService, UpdateProfileDto } from './profile.service';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
@@ -26,6 +26,15 @@ export class ProfileController {
   @Get('me/achievements')
   async getMyAchievements(@CurrentUser('id') userId: string) {
     return this.profileService.getAchievements(userId);
+  }
+
+  @Get('me/history')
+  async getMyHistory(
+    @CurrentUser('id') userId: string,
+    @Query('page') page = 1,
+    @Query('limit') limit = 20,
+  ) {
+    return this.profileService.getGameHistory(userId, Number(page), Math.min(Number(limit), 50));
   }
 
   @Get('avatars')

@@ -8,6 +8,7 @@ import { useNotificationsStore } from '@/stores/notifications.store';
 import { calculateLevelProgress } from '@/lib/utils';
 import Navbar from '@/components/layout/Navbar';
 import DiscordBanner from '@/components/banner/DiscordBanner';
+import Leaderboard from '@/components/ui/Leaderboard';
 import api from '@/lib/api';
 import toast from 'react-hot-toast';
 import { GAME_TYPES } from '@/types';
@@ -35,12 +36,17 @@ export default function DashboardPage() {
     // Her 8 saniyede otomatik yenile
     intervalRef.current = setInterval(loadPublicRooms, 8000);
     // Socket ile anlık güncelleme
-    import('@/lib/socket').then(({ connectRoomSocket, getRoomSocket }) => {
+import('@/lib/socket').then(({ connectRoomSocket, getRoomSocket }) => {
       connectRoomSocket();
       const s = getRoomSocket();
+      s.off('room:updated');
+      s.off('room:closed');
+      s.off('room:joined');
+      s.off('rooms:list-updated');
       s.on('room:updated', loadPublicRooms);
       s.on('room:closed', loadPublicRooms);
       s.on('room:joined', loadPublicRooms);
+      s.on('rooms:list-updated', loadPublicRooms);
     });
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
   }, [isAuthenticated]);
@@ -72,7 +78,7 @@ export default function DashboardPage() {
     }
   };
 
-  const handleJoinRoom = async (roomId: string) => {
+const handleJoinRoom = async (roomId: string) => {
     setJoiningId(roomId);
     try {
       const { data } = await api.post('/rooms/join', { codeOrId: roomId });
@@ -81,6 +87,29 @@ export default function DashboardPage() {
     } catch (err: any) {
       toast.error(err?.response?.data?.message || 'Katılamadın');
     } finally { setJoiningId(null); }
+  };
+
+  const handleQuickPlay = async () => {
+    try {
+      const { data } = await api.get('/rooms/public');
+      const rooms = (data.data || data).filter((r: any) => r.status === 'WAITING' && r.players?.length < r.maxPlayers);
+      if (rooms.length > 0) {
+        const room = rooms[0];
+        await handleJoinRoom(room.id);
+      } else {
+        // Uygun oda yok → oda oluşturup yönlendir (host olarak)
+        const { data: created } = await api.post('/rooms', {
+          name: 'Hızlı Oyun',
+          gameType: 'vampire-village',
+          maxPlayers: 8,
+        });
+        const room = created.data || created;
+        toast.success('Oda oluşturuldu!');
+        router.push(`/room/${room.id}`);
+      }
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || 'Hızlı oyun başlatılamadı');
+    }
   };
 
   const profile = user?.profile;
@@ -163,15 +192,24 @@ export default function DashboardPage() {
                 <span className="text-2xl group-hover:scale-110 transition-transform">➕</span>
                 <span className="text-xs font-bold">Oda Oluştur</span>
               </Link>
-              <Link href="/room/join"
+<Link href="/room/join"
                 className="flex flex-col items-center gap-2 p-4 rounded-2xl border border-white/8 bg-white/3 hover:bg-white/8 transition-all group">
                 <span className="text-2xl group-hover:scale-110 transition-transform">🔗</span>
                 <span className="text-xs font-bold">Odaya Katıl</span>
               </Link>
             </div>
 
+            {/* Quick Play */}
+            <button onClick={handleQuickPlay}
+              className="w-full flex items-center justify-center gap-2 p-3.5 rounded-2xl border border-green-500/30 bg-gradient-to-r from-green-600/20 to-emerald-500/20 hover:from-green-600/30 hover:to-emerald-500/30 text-green-300 font-bold text-sm transition-all active:scale-95">
+              ⚡ Hızlı Oyun
+            </button>
+
             {/* Discord Banner */}
             <DiscordBanner placement="dashboard" />
+
+            {/* Leaderboard */}
+            <Leaderboard limit={5} />
 
             {/* Kod ile katıl */}
             <div className="rounded-2xl border border-white/8 bg-white/3 p-4">

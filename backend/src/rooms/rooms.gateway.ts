@@ -23,6 +23,22 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer() server: Server;
   private readonly logger = new Logger(RoomsGateway.name);
 
+  // 🔒 Basit in-memory rate limiter (spam koruması)
+  private rateLimits = new Map<string, { count: number; resetAt: number }>();
+
+  private isRateLimited(key: string, max: number, windowMs: number): boolean {
+    const now = Date.now();
+    const entry = this.rateLimits.get(key);
+    if (!entry || entry.resetAt < now) {
+      this.rateLimits.set(key, { count: 1, resetAt: now + windowMs });
+      return false;
+    }
+    entry.count++;
+    if (entry.count > max) return true;
+    this.rateLimits.set(key, entry);
+    return false;
+  }
+
   constructor(
     private readonly roomsService: RoomsService,
     private readonly jwtService: JwtService,
@@ -84,12 +100,13 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     if (!userId) return;
 
     try {
-      const room = await this.roomsService.joinRoom(userId, data.roomId, data.password);
+const room = await this.roomsService.joinRoom(userId, data.roomId, data.password);
       client.join(`room:${room.id}`);
       this.server.to(`room:${room.id}`).emit('room:updated', room);
       client.emit('room:joined', room);
+      this.broadcastRoomList();
     } catch (err) {
-      client.emit('room:error', { message: err.message });
+      client.emit('room:error', { message: (err as Error).message });
     }
   }
 
@@ -105,16 +122,17 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       const result = await this.roomsService.leaveRoom(userId, data.roomId);
       client.leave(`room:${data.roomId}`);
 
-      if (result.closed) {
+if (result.closed) {
         this.server.to(`room:${data.roomId}`).emit('room:closed');
       } else {
         const updated = await this.roomsService.getRoomById(data.roomId);
         this.server.to(`room:${data.roomId}`).emit('room:updated', updated);
       }
+      this.broadcastRoomList();
 
-      client.emit('room:left');
+client.emit('room:left');
     } catch (err) {
-      client.emit('room:error', { message: err.message });
+      client.emit('room:error', { message: (err as Error).message });
     }
   }
 
@@ -130,9 +148,10 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const room = await this.roomsService.getRoomById(data.roomId);
     this.server.to(`room:${data.roomId}`).emit('room:updated', room);
 
-    if (result.allReady) {
+if (result.allReady) {
       this.server.to(`room:${data.roomId}`).emit('room:all-ready');
     }
+    this.broadcastRoomList();
   }
 
   @SubscribeMessage('room:kick')
@@ -155,10 +174,11 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
         }
       }
 
-      const room = await this.roomsService.getRoomById(data.roomId);
+const room = await this.roomsService.getRoomById(data.roomId);
       this.server.to(`room:${data.roomId}`).emit('room:updated', room);
+      this.broadcastRoomList();
     } catch (err) {
-      client.emit('room:error', { message: err.message });
+      client.emit('room:error', { message: (err as Error).message });
     }
   }
 
@@ -174,59 +194,131 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       await this.roomsService.closeRoom(userId, data.roomId);
       this.server.to(`room:${data.roomId}`).emit('room:closed');
 
-      const sockets = await this.server.in(`room:${data.roomId}`).fetchSockets();
+const sockets = await this.server.in(`room:${data.roomId}`).fetchSockets();
       for (const s of sockets) {
         s.leave(`room:${data.roomId}`);
       }
+      this.broadcastRoomList();
     } catch (err) {
-      client.emit('room:error', { message: err.message });
+      client.emit('room:error', { message: (err as Error).message });
     }
   }
 
-    socket.on('room:select-game', async (data: { roomId: string; gameType: string }) => {
-      try {
-        const room = await this.roomsService.selectGame(userId, data.roomId, data.gameType);
-        this.server.to(`room:${data.roomId}`).emit('room:updated', room);
-      } catch (err) {
-        client.emit('room:error', { message: err.message });
-      }
-    });
+@SubscribeMessage('room:select-game')
+  async handleSelectGame(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { roomId: string; gameType: string },
+  ) {
+    const userId = client.data.userId;
+    if (!userId) return;
 
-    socket.on('room:update-settings', async (data: { roomId: string; maxPlayers?: number; gameSettings?: Record<string, unknown> }) => {
-      try {
-        const room = await this.roomsService.updateSettings(userId, data.roomId, {
-          maxPlayers: data.maxPlayers,
-          gameSettings: data.gameSettings,
-        });
-        this.server.to(`room:${data.roomId}`).emit('room:updated', room);
-        this.server.to(`room:${data.roomId}`).emit('room:settings-updated', {
-          maxPlayers: room.maxPlayers,
-          settings: room.settings,
-        });
-      } catch (err) {
-        client.emit('room:error', { message: err.message });
-      }
-    });
+    try {
+const room = await this.roomsService.selectGame(userId, data.roomId, data.gameType);
+      this.server.to(`room:${data.roomId}`).emit('room:updated', room);
+    } catch (err) {
+      client.emit('room:error', { message: (err as Error).message });
+    }
+  }
+
+  @SubscribeMessage('room:update-settings')
+  async handleUpdateSettings(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { roomId: string; maxPlayers?: number; gameSettings?: Record<string, unknown> },
+  ) {
+    const userId = client.data.userId;
+    if (!userId) return;
+
+    try {
+      const room = await this.roomsService.updateSettings(userId, data.roomId, {
+        maxPlayers: data.maxPlayers,
+        gameSettings: data.gameSettings,
+      });
+      this.server.to(`room:${data.roomId}`).emit('room:updated', room);
+this.server.to(`room:${data.roomId}`).emit('room:settings-updated', {
+        maxPlayers: room.maxPlayers,
+        settings: room.settings,
+      });
+    } catch (err) {
+      client.emit('room:error', { message: (err as Error).message });
+    }
+  }
 
   @SubscribeMessage('lobby:chat')
   handleChat(
     @ConnectedSocket() client: Socket,
     @MessageBody() data: { roomId: string; message: string },
   ) {
-    const userId = client.data.userId;
+const userId = client.data.userId;
     if (!userId) return;
+
+    // 🔒 Rate limit: saniyede max 5 lobi mesajı
+    if (this.isRateLimited(`lobby-chat:${userId}`, 5, 5000)) {
+      client.emit('room:error', { message: 'Çok hızlı mesaj gönderiyorsun, lütfen yavaşla' });
+      return;
+    }
 
     const sanitized = data.message
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;')
       .substring(0, 300);
 
-    this.server.to(`room:${data.roomId}`).emit('lobby:chat', {
+this.server.to(`room:${data.roomId}`).emit('lobby:chat', {
       userId,
       username: client.data.username,
       message: sanitized,
       timestamp: new Date().toISOString(),
     });
+  }
+
+  @SubscribeMessage('lobby:typing')
+  handleTyping(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { roomId: string; isTyping: boolean },
+  ) {
+    const userId = client.data.userId;
+    if (!userId) return;
+    client.to(`room:${data.roomId}`).emit('lobby:typing', {
+      userId,
+      username: client.data.username,
+      isTyping: data.isTyping,
+    });
+  }
+
+  @SubscribeMessage('lobby:emote')
+  handleEmote(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { roomId: string; emote: string },
+  ) {
+    const userId = client.data.userId;
+    if (!userId) return;
+    const allowed = ['😂', '😮', '😡', '❤️', '👏', '👍', '🎉', '🤔'];
+    if (!allowed.includes(data.emote)) return;
+    this.server.to(`room:${data.roomId}`).emit('lobby:emote', {
+      userId,
+      username: client.data.username,
+      emote: data.emote,
+      timestamp: Date.now(),
+    });
+  }
+
+  @SubscribeMessage('room:transfer-host')
+  async handleTransferHost(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { roomId: string; targetUserId: string },
+  ) {
+    const userId = client.data.userId;
+    if (!userId) return;
+    try {
+      const room = await this.roomsService.transferHost(userId, data.roomId, data.targetUserId);
+      this.server.to(`room:${data.roomId}`).emit('room:updated', room);
+      this.server.to(`room:${data.roomId}`).emit('room:host-changed', {
+        newHostId: data.targetUserId,
+        newHostName: room.host?.profile?.displayName || room.host?.username,
+      });
+      this.broadcastRoomList();
+    } catch (err) {
+      client.emit('room:error', { message: (err as Error).message });
+    }
   }
 
   @SubscribeMessage('room:invite')
@@ -253,6 +345,13 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
         } catch {}
       }
     }
+  }
+
+async broadcastRoomList(): Promise<void> {
+    try {
+      const rooms = await this.roomsService.getPublicRooms();
+      this.server.emit('rooms:list-updated', rooms);
+    } catch {}
   }
 
   emitToRoom(roomId: string, event: string, data: unknown): void {

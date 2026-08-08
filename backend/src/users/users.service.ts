@@ -37,19 +37,29 @@ export class UsersService {
 
   async searchUsers(query: string, currentUserId: string) {
     return this.prisma.user.findMany({
-      where: {
-        username: { contains: query, mode: 'insensitive' },
-        id: { not: currentUserId },
-        isGuest: false,
-      },
-      select: {
-        id: true,
-        username: true,
-        isOnline: true,
-        profile: { select: { displayName: true, avatar: true, level: true } },
-      },
+      where: { username: { contains: query, mode: 'insensitive' }, id: { not: currentUserId }, isGuest: false },
+      select: { id: true, username: true, isOnline: true, profile: { select: { displayName: true, avatar: true, level: true } } },
       take: 20,
     });
+  }
+
+  async getLeaderboard(sort: 'wins' | 'level' = 'wins', limit = 10) {
+    const users = await this.prisma.user.findMany({
+      where: { isGuest: false },
+      select: {
+        id: true, username: true,
+        profile: { select: { displayName: true, avatar: true, level: true, xp: true } },
+        statistics: { select: { gamesWon: true, gamesPlayed: true, winRate: true } },
+      },
+      take: limit * 3, // filter sonrası yeterli olsun
+    });
+    const sorted = users
+      .filter(u => u.statistics)
+      .sort((a, b) => sort === 'wins'
+        ? (b.statistics?.gamesWon || 0) - (a.statistics?.gamesWon || 0)
+        : (b.profile?.level || 0) - (a.profile?.level || 0))
+      .slice(0, limit);
+    return sorted;
   }
 
   async updateOnlineStatus(userId: string, isOnline: boolean): Promise<void> {

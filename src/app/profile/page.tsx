@@ -54,7 +54,10 @@ export default function ProfilePage() {
     try {
       const { data } = await api.get('/profile/me/history');
       setHistory(data.data || data);
-    } catch { setHistory([]); }
+    } catch {
+      // Backend history endpoint yoksa boş göster
+      setHistory([]);
+    }
   };
 
   useEffect(() => {

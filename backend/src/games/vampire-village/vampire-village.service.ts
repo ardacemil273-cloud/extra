@@ -87,6 +87,15 @@ export class VampireVillageService {
     if (room.hostId !== hostId) throw new ForbiddenException('Sadece host oyunu başlatabilir');
     if (room.players.length < 4) throw new BadRequestException('En az 4 oyuncu gerekli');
 
+    // Oda ayarlarını oku (host panelinden kaydedilen)
+    const settings = (room.settings as any) || {};
+    const gameSettings = {
+      vampireCount: Math.min(settings.vampireCount || 1, Math.floor(room.players.length / 4)),
+      hasDoctor: settings.hasDoctor !== false,
+      hasDetective: settings.hasDetective !== false,
+      hasHunter: settings.hasHunter === true,
+    };
+
     const players: GamePlayer[] = room.players.map((rp) => ({
       userId: rp.userId,
       username: rp.user.username,
@@ -123,17 +132,21 @@ export class VampireVillageService {
 
     await this.redis.set(`game:match:${roomId}`, match.id);
 
-    const roleMap = this.assignRoles(players);
+    const roleMap = this.assignRoles(players, gameSettings);
     await this.gameEngine.assignRoles(roomId, roleMap);
 
-    const updatedState = await this.gameEngine.getState(roomId);
+const updatedState = await this.gameEngine.getState(roomId);
 
+    // 🔒 ROLE LEAK PREVENTION: Her oyuncuya SADECE kendi rolünü gönder (socket.to(userId))
     for (const [userId, roleData] of Object.entries(roleMap)) {
-      server.to(`game:${roomId}`).emit('game:role-assigned', {
-        userId,
-        role: roleData.role,
-        team: roleData.team,
-      });
+      const socketId = await this.redis.get(`user:game-socket:${userId}`);
+      if (socketId) {
+        server.to(socketId).emit('game:role-assigned', {
+          userId,
+          role: roleData.role,
+          team: roleData.team,
+        });
+      }
     }
 
     const narratorLine = pickRandom(NARRATOR_LINES.game_start);
@@ -536,26 +549,25 @@ export class VampireVillageService {
     setTimeout(() => this.gameEngine.deleteState(roomId), 300000);
   }
 
-  private assignRoles(players: GamePlayer[]): Record<string, { role: string; team: string }> {
+  private assignRoles(players: GamePlayer[], settings?: { vampireCount: number; hasDoctor: boolean; hasDetective: boolean; hasHunter: boolean }): Record<string, { role: string; team: string }> {
     const count = players.length;
     const shuffled = [...players].sort(() => Math.random() - 0.5);
-
     const roleMap: Record<string, { role: VampireRole; team: string }> = {};
 
-    const vampireCount = Math.max(1, Math.floor(count / 4));
+    const vampireCount = settings ? Math.max(1, Math.min(settings.vampireCount, Math.floor(count / 4))) : Math.max(1, Math.floor(count / 4));
     let idx = 0;
 
     for (let i = 0; i < vampireCount; i++) {
       roleMap[shuffled[idx++].userId] = { role: 'VAMPIRE', team: 'VAMPIRES' };
     }
 
-    if (count >= 5 && idx < shuffled.length) {
+    if ((settings ? settings.hasDoctor : true) && count >= 5 && idx < shuffled.length) {
       roleMap[shuffled[idx++].userId] = { role: 'DOCTOR', team: 'VILLAGERS' };
     }
-    if (count >= 6 && idx < shuffled.length) {
+    if ((settings ? settings.hasDetective : true) && count >= 6 && idx < shuffled.length) {
       roleMap[shuffled[idx++].userId] = { role: 'DETECTIVE', team: 'VILLAGERS' };
     }
-    if (count >= 8 && idx < shuffled.length) {
+    if ((settings ? settings.hasHunter : false) && count >= 8 && idx < shuffled.length) {
       roleMap[shuffled[idx++].userId] = { role: 'HUNTER', team: 'VILLAGERS' };
     }
 

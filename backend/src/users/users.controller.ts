@@ -14,6 +14,14 @@ export class UsersController {
     return this.usersService.searchUsers(query, userId);
   }
 
+  @Get('leaderboard')
+  async leaderboard(
+    @Query('sort') sort: 'wins' | 'level' = 'wins',
+    @Query('limit') limit = 10,
+  ) {
+    return this.usersService.getLeaderboard(sort, Math.min(Number(limit), 50));
+  }
+
   @Get(':id')
   async getUser(@Param('id') id: string) {
     return this.usersService.findById(id);

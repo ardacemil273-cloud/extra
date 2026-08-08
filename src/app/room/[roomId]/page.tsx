@@ -7,6 +7,7 @@ import { useRoomStore } from '@/stores/room.store';
 import { getRoomSocket, connectRoomSocket } from '@/lib/socket';
 import Navbar from '@/components/layout/Navbar';
 import DiscordBanner from '@/components/banner/DiscordBanner';
+import InviteModal from '@/components/room/InviteModal';
 import api from '@/lib/api';
 import toast from 'react-hot-toast';
 import { Room, ChatMessage, GAME_TYPES } from '@/types';
@@ -34,6 +35,7 @@ export default function LobbyPage() {
   const [chatInput, setChatInput] = useState('');
   const [isReady, setIsReady] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showInvite, setShowInvite] = useState(false);
   const [gameSettings, setGameSettings] = useState<GameSettings>(DEFAULT_SETTINGS);
   const [maxPlayersInput, setMaxPlayersInput] = useState(8);
   const [savingSettings, setSavingSettings] = useState(false);
@@ -172,7 +174,12 @@ export default function LobbyPage() {
       </div>
       <Navbar />
 
-      {/* ── AYARLAR MODALI ── */}
+      {/* Invite Modal */}
+      {showInvite && currentRoom && (
+        <InviteModal roomCode={currentRoom.code} roomId={roomId} onClose={() => setShowInvite(false)} />
+      )}
+
+      {/* Settings Modal */}
       <AnimatePresence>
         {showSettings && isHost && (
           <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} exit={{ opacity:0 }}
@@ -276,6 +283,10 @@ export default function LobbyPage() {
           </div>
 
           <div className="flex items-center gap-2">
+            <button onClick={() => setShowInvite(true)}
+              className="px-3 py-2 rounded-xl border border-green-500/30 bg-green-500/10 hover:bg-green-500/20 text-green-300 text-xs font-semibold transition-all">
+              🔗 Davet Et
+            </button>
             {isHost && (
               <>
                 <button onClick={() => setShowSettings(true)}

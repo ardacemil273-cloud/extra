@@ -137,6 +137,7 @@ export interface GamePlayer {
   votes: number;
   votedFor: string | null;
   actionDone?: boolean;
+  isSpeaking?: boolean;
 }
 
 export interface VoteEntry {
@@ -201,6 +202,46 @@ export const GAME_TYPES = [
     available: true,
   },
   {
+    id: 'farm-together',
+    name: 'Farm Together',
+    description: 'Birlikte çiftçilik yap, ürün yetiştir, 1000 altına ulaş! 🌾',
+    icon: '🌾',
+    minPlayers: 2,
+    maxPlayers: 8,
+    tags: ['Kooperatif', 'Rahat', 'Çiftlik'],
+    available: true,
+  },
+  {
+    id: 'fashion-star',
+    name: 'Fashion Star',
+    description: 'Temalara uygun giyin, podyumda yıldız ol! 👗',
+    icon: '👗',
+    minPlayers: 2,
+    maxPlayers: 8,
+    tags: ['Moda', 'Yaratıcı', 'Eğlenceli'],
+    available: true,
+  },
+{
+    id: 'cafe-rush',
+    name: 'Cafe Rush',
+    description: 'Siparişleri yetiştir, mutfağı yönet, 15 sipariş tamamla! 🍰',
+    icon: '🍰',
+    minPlayers: 2,
+    maxPlayers: 4,
+    tags: ['Kooperatif', 'Hızlı', 'Mutfak'],
+    available: true,
+  },
+  {
+    id: 'barbie-dreamhouse',
+    name: 'Barbie Dreamhouse',
+    description: 'Rüya dolabını aç, Barbie\'yi giydir, yıldızı ol! 💖👛',
+    icon: '💖👛',
+    minPlayers: 2,
+    maxPlayers: 8,
+    tags: ['Moda', 'Barbie', 'Rüya'],
+    available: true,
+  },
+  {
     id: 'mafia',
     name: 'Mafya',
     description: 'Klasik mafya oyunu. Yakında geliyor!',
@@ -210,27 +251,87 @@ export const GAME_TYPES = [
     tags: ['Rol Oyunu', 'Strateji'],
     available: false,
   },
-  {
-    id: 'bomb-party',
-    name: 'Bomb Party',
-    description: 'Kelime oyunu. Yakında geliyor!',
-    icon: '💣',
-    minPlayers: 2,
-    maxPlayers: 10,
-    tags: ['Kelime', 'Hızlı'],
-    available: false,
-  },
-  {
-    id: 'draw-guess',
-    name: 'Çizim Oyunu',
-    description: 'Çiz ve tahmin et. Yakında geliyor!',
-    icon: '🎨',
-    minPlayers: 2,
-    maxPlayers: 12,
-    tags: ['Yaratıcı', 'Eğlenceli'],
-    available: false,
-  },
 ] as const;
+
+export type GameTypeId = typeof GAME_TYPES[number]['id'];
+
+// Farm Together types
+export type CropType = 'wheat' | 'strawberry' | 'pumpkin';
+export interface FarmCell {
+  index: number;
+  crop: CropType | null;
+  plantedAt: number | null;
+  wateredAt: number | null;
+  wateredBy: string | null;
+  grown: boolean;
+  growth: number;
+}
+export interface FarmState {
+  grid: FarmCell[];
+  coins: number;
+  goal: number;
+  startTime: number;
+  duration: number;
+  remaining: number;
+  status: 'COUNTDOWN' | 'PLAYING' | 'GAME_OVER';
+  splash: Array<{ cell: number; userId: string; displayName: string; at: number }>;
+  winner: boolean;
+  playerStats: Record<string, { planted: number; harvested: number; watered: number }>;
+}
+
+// Fashion Star types
+export type ItemCategory = 'top' | 'bottom' | 'dress' | 'shoes' | 'accessory' | 'hair';
+export interface WardrobeItem { id: string; category: ItemCategory; name: string; emoji: string; color: string; }
+export interface FashionState {
+  round: number;
+  theme: { id: string; name: string; emoji: string; desc: string };
+  phase: 'DRESSING' | 'RUNWAY' | 'ROUND_RESULT' | 'GAME_OVER';
+  dressTime: number;
+  looks: Record<string, { items: string[] }>;
+  submitted: string[];
+  votes: Array<{ voterId: string; targetId: string; stars: number }>;
+  runwayOrder: string[];
+  runwayPos: number;
+  roundResults: Record<string, number>;
+  totalScores: Record<string, number>;
+  winnerId: string | null;
+  podium: Array<{ userId: string; score: number }> | null;
+  runwayTimer: number;
+}
+
+// Cafe Rush types
+export type RecipeId = 'strawberry-cake' | 'burger' | 'salad' | 'pancake' | 'smoothie';
+export interface Recipe { id: RecipeId; name: string; emoji: string; steps: Array<'chop' | 'bake' | 'mix'>; coins: number; }
+export interface Order {
+  id: string; recipe: RecipeId; stepIndex: number; assignedTo: string | null;
+  createdAt: number; expiresAt: number; status: 'ACTIVE' | 'COMPLETE' | 'EXPIRED';
+}
+export interface CafeState {
+  orders: Order[]; served: number; goal: number; startTime: number; duration: number;
+  remaining: number; status: 'PLAYING' | 'GAME_OVER'; orderTimer: number;
+  playerCooks: Record<string, number>; winner: boolean;
+}
+
+// Barbie Dreamhouse types
+export type BarbieCategory = 'dress' | 'top' | 'bottom' | 'shoes' | 'bag' | 'hair' | 'makeup' | 'accessory';
+export interface BarbieItem { id: string; category: BarbieCategory; name: string; emoji: string; color: string; }
+export interface BarbieTheme { id: string; name: string; emoji: string; desc: string; }
+export interface BarbieState {
+  round: number;
+  theme: BarbieTheme;
+  phase: 'DRESSING' | 'BOX_REVEAL' | 'RUNWAY' | 'ROUND_RESULT' | 'GAME_OVER';
+  dressTime: number;
+  looks: Record<string, { items: string[]; makeup: string[] }>;
+  submitted: string[];
+  votes: Array<{ voterId: string; targetId: string; stars: number }>;
+  runwayOrder: string[];
+  runwayPos: number;
+  roundResults: Record<string, number>;
+  totalScores: Record<string, number>;
+  winnerId: string | null;
+  podium: Array<{ userId: string; score: number }> | null;
+  runwayTimer: number;
+}
 
 export const ROLE_CONFIG: Record<VampireRole, {
   name: string;

@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import { Toaster } from 'react-hot-toast';
+import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 import '../styles/globals.css';
 
 export const metadata: Metadata = {
@@ -8,6 +9,12 @@ export const metadata: Metadata = {
   keywords: ['parti oyunu', 'vampir köylü', 'online oyun', 'sosyal oyun', 'mafia'],
   authors: [{ name: 'PartyVerse Team' }],
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'https://partyverse.vercel.app'),
+  manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'PartyVerse',
+  },
   icons: {
     icon: '/favicon.ico',
     apple: '/apple-touch-icon.png',
@@ -30,7 +37,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="tr" className="dark">
       <body className="min-h-screen" style={{ backgroundColor: '#080b14', color: 'white' }}>
-        {children}
+        <ErrorBoundary>
+          {children}
+        </ErrorBoundary>
         <Toaster
           position="top-right"
           toastOptions={{
@@ -46,7 +55,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             success: {
               iconTheme: { primary: '#22c55e', secondary: '#161b22' },
             },
-            error: {
+error: {
               iconTheme: { primary: '#ef4444', secondary: '#161b22' },
             },
           }}

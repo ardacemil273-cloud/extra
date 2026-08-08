@@ -93,8 +93,16 @@ export class GameEngineService {
     }));
   }
 
-  async castVote(roomId: string, voterId: string, targetId: string): Promise<GameState | null> {
+async castVote(roomId: string, voterId: string, targetId: string): Promise<GameState | null> {
     return this.updateState(roomId, (s) => {
+      // 🔒 SERVER AUTHORITATIVE: Oylama sadece DAY_VOTING fazında, hayattaki oyuncular tarafından ve kendine oy verilmeden yapılabilir
+      if (s.phase !== 'DAY_VOTING') return s;
+      const voter = s.players[voterId];
+      const target = s.players[targetId];
+      if (!voter || voter.status !== 'ALIVE') return s;
+      if (!target || target.status !== 'ALIVE') return s;
+      if (voterId === targetId) return s;
+
       const filteredVotes = s.votes.filter((v) => v.voterId !== voterId);
       const newVotes = [...filteredVotes, { voterId, targetId, timestamp: Date.now() }];
 
