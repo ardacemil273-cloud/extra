@@ -12,7 +12,7 @@ import { RedisService } from '../redis/redis.service';
 import * as bcrypt from 'bcryptjs';
 import { nanoid } from 'nanoid';
 import { v4 as uuidv4 } from 'uuid';
-import { AuthProvider } from '../common/constants';
+import { AuthProvider } from '@prisma/client';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 
