@@ -55,20 +55,20 @@ model User {
 
   profile       Profile?
   statistics    Statistics?
-  
+
   sentFriendRequests     Friend[] @relation("FriendRequester")
   receivedFriendRequests Friend[] @relation("FriendAddressee")
-  
+
   notifications         Notification[] @relation("NotificationRecipient")
   sentNotifications     Notification[] @relation("NotificationSender")
-  
+
   hostedRooms   Room[]   @relation("RoomHost")
   roomPlayers   RoomPlayer[]
   matchPlayers  MatchPlayer[]
-  
+
   achievements  UserAchievement[]
   history       GameHistory[]
-  
+
   refreshTokens RefreshToken[]
 
   @@index([username])
