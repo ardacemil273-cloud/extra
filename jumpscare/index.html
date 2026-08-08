@@ -1,466 +1,350 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>🎮 Konsantrasyon Testi - Gözlerini Kırpmadan İzle!</title>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>🎯 Konsantrasyon Testi</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0a0a0a;color:#fff;font-family:'Segoe UI',sans-serif;height:100vh;display:flex;align-items:center;justify-content:center;overflow:hidden;user-select:none}
 
-    body {
-      background: #000;
-      color: #fff;
-      font-family: 'Courier New', monospace;
-      height: 100vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      overflow: hidden;
-      user-select: none;
-    }
+/* ── EKRANLAR ── */
+.screen{display:none;flex-direction:column;align-items:center;justify-content:center;width:100%;height:100%;text-align:center;padding:20px}
+.screen.active{display:flex}
 
-    #intro {
-      text-align: center;
-      animation: fadeIn 1s ease;
-    }
+/* ── INTRO ── */
+#sIntro h1{font-size:2.8rem;background:linear-gradient(135deg,#7c3aed,#a855f7);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:12px}
+#sIntro .sub{color:#888;font-size:1.1rem;margin-bottom:24px;line-height:1.8}
+#sIntro .warn{border:1px solid #f59e0b;color:#f59e0b;padding:10px 24px;border-radius:8px;font-size:.85rem;margin-bottom:28px}
+.btn{padding:16px 48px;border:none;border-radius:12px;font-size:1.2rem;font-weight:700;cursor:pointer;transition:all .2s;letter-spacing:1px}
+.btn-primary{background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;box-shadow:0 0 30px rgba(124,58,237,.4)}
+.btn-primary:hover{transform:scale(1.05);box-shadow:0 0 50px rgba(168,85,247,.6)}
+.btn-sec{background:#1a1a1a;color:#aaa;border:1px solid #333;margin:6px}
+.btn-sec:hover{border-color:#7c3aed;color:#a855f7}
 
-    #intro h1 {
-      font-size: 2.5rem;
-      color: #00ff88;
-      text-shadow: 0 0 20px #00ff88;
-      margin-bottom: 1rem;
-    }
+/* ── OYUN ── */
+#sGame{position:relative}
+#gameTitle{font-size:1rem;color:#555;letter-spacing:3px;text-transform:uppercase;margin-bottom:20px}
+#arena{width:520px;height:440px;background:#050505;border:1px solid #1a1a1a;border-radius:16px;position:relative;overflow:hidden}
+#arena::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at center,#0d0d0d,#000)}
+#dot{position:absolute;width:20px;height:20px;background:radial-gradient(circle,#ff6666,#ff0000);border-radius:50%;box-shadow:0 0 14px #ff0000,0 0 28px rgba(255,0,0,.4);transition:left .12s ease,top .12s ease}
+#timerWrap{width:520px;margin-top:14px}
+#timerBar{height:6px;background:#111;border-radius:3px;overflow:hidden}
+#timerFill{height:100%;background:linear-gradient(90deg,#00ff88,#f59e0b,#ef4444);border-radius:3px;transition:width .1s linear}
+#hud{display:flex;justify-content:space-between;margin-top:8px;font-size:.85rem;color:#333;letter-spacing:1px}
 
-    #intro p {
-      color: #aaa;
-      font-size: 1.1rem;
-      margin-bottom: 2rem;
-      line-height: 1.8;
-    }
+/* ── JUMPSCARE ── */
+#sJump{position:fixed;inset:0;z-index:9999;background:#000;flex-direction:column;animation:bgFlash .12s infinite}
+#jumpFace{width:100%;max-width:700px;height:auto;animation:shakeEl .08s infinite}
+#jumpText{font-size:5rem;font-weight:900;color:#ff0000;text-shadow:0 0 40px #ff0000,0 0 80px #ff0000;animation:shakeEl .06s infinite;margin-top:-20px;letter-spacing:6px}
+#jumpSub{font-size:1.4rem;color:#ff6666;margin-top:10px;animation:fadeUp .6s ease 1.5s both}
 
-    #intro .warning {
-      color: #ffcc00;
-      font-size: 0.9rem;
-      margin-bottom: 2rem;
-      border: 1px solid #ffcc00;
-      padding: 10px 20px;
-      border-radius: 8px;
-    }
+/* ── SONUÇ ── */
+#sResult h2{font-size:2.5rem;margin-bottom:12px}
+#sResult .desc{color:#888;font-size:1.1rem;line-height:1.9;margin-bottom:28px}
+.btnRow{display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
 
-    #startBtn {
-      background: linear-gradient(135deg, #7c3aed, #a855f7);
-      border: none;
-      color: white;
-      padding: 16px 48px;
-      font-size: 1.2rem;
-      font-family: 'Courier New', monospace;
-      border-radius: 12px;
-      cursor: pointer;
-      transition: all 0.2s;
-      letter-spacing: 2px;
-    }
-
-    #startBtn:hover {
-      transform: scale(1.05);
-      box-shadow: 0 0 30px rgba(168,85,247,0.5);
-    }
-
-    /* ── OYUN EKRANI ── */
-    #game {
-      display: none;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      width: 100%;
-      height: 100%;
-    }
-
-    #instructions {
-      font-size: 1.3rem;
-      color: #00ff88;
-      margin-bottom: 2rem;
-      text-align: center;
-      text-shadow: 0 0 10px #00ff88;
-    }
-
-    #dotContainer {
-      position: relative;
-      width: 500px;
-      height: 500px;
-      border: 2px solid #1a1a1a;
-      border-radius: 16px;
-      background: #050505;
-      overflow: hidden;
-    }
-
-    #dot {
-      position: absolute;
-      width: 18px;
-      height: 18px;
-      background: #ff4444;
-      border-radius: 50%;
-      box-shadow: 0 0 12px #ff4444;
-      transition: all 0.08s linear;
-      cursor: none;
-    }
-
-    #timerBar {
-      width: 500px;
-      height: 8px;
-      background: #1a1a1a;
-      border-radius: 4px;
-      margin-top: 20px;
-      overflow: hidden;
-    }
-
-    #timerFill {
-      height: 100%;
-      background: linear-gradient(90deg, #00ff88, #ffcc00, #ff4444);
-      border-radius: 4px;
-      transition: width 0.1s linear;
-      width: 100%;
-    }
-
-    #score {
-      margin-top: 16px;
-      font-size: 1rem;
-      color: #555;
-      letter-spacing: 2px;
-    }
-
-    /* ── JUMPSCARE ── */
-    #jumpscare {
-      display: none;
-      position: fixed;
-      inset: 0;
-      z-index: 9999;
-      background: #000;
-      align-items: center;
-      justify-content: center;
-      flex-direction: column;
-    }
-
-    #jumpscareImg {
-      font-size: 12rem;
-      animation: shake 0.1s infinite, flashRed 0.15s infinite;
-    }
-
-    #jumpscareText {
-      font-size: 4rem;
-      font-weight: black;
-      color: #ff0000;
-      text-shadow: 0 0 40px #ff0000, 0 0 80px #ff0000;
-      animation: shake 0.08s infinite;
-      margin-top: 1rem;
-      letter-spacing: 4px;
-    }
-
-    #jumpscareSubtext {
-      font-size: 1.5rem;
-      color: #ff6666;
-      margin-top: 1rem;
-      animation: fadeIn 0.5s ease 1s both;
-    }
-
-    /* ── SONUÇ ── */
-    #result {
-      display: none;
-      text-align: center;
-      animation: fadeIn 0.5s ease;
-    }
-
-    #result h2 {
-      font-size: 2rem;
-      margin-bottom: 1rem;
-    }
-
-    #result p {
-      color: #aaa;
-      margin-bottom: 2rem;
-      font-size: 1.1rem;
-    }
-
-    #retryBtn {
-      background: #1a1a1a;
-      border: 1px solid #333;
-      color: white;
-      padding: 12px 36px;
-      font-size: 1rem;
-      font-family: 'Courier New', monospace;
-      border-radius: 8px;
-      cursor: pointer;
-      margin: 0 8px;
-      transition: all 0.2s;
-    }
-
-    #retryBtn:hover { border-color: #7c3aed; color: #a855f7; }
-
-    #shareBtn {
-      background: linear-gradient(135deg, #5865F2, #7289DA);
-      border: none;
-      color: white;
-      padding: 12px 36px;
-      font-size: 1rem;
-      font-family: 'Courier New', monospace;
-      border-radius: 8px;
-      cursor: pointer;
-      margin: 0 8px;
-      transition: all 0.2s;
-    }
-
-    #shareBtn:hover { transform: scale(1.05); }
-
-    /* ── ANİMASYONLAR ── */
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(10px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    @keyframes shake {
-      0%, 100% { transform: translate(0, 0) rotate(0deg); }
-      10% { transform: translate(-8px, -5px) rotate(-2deg); }
-      20% { transform: translate(8px, 5px) rotate(2deg); }
-      30% { transform: translate(-6px, 8px) rotate(-1deg); }
-      40% { transform: translate(6px, -8px) rotate(1deg); }
-      50% { transform: translate(-4px, 5px) rotate(-2deg); }
-      60% { transform: translate(4px, -5px) rotate(2deg); }
-      70% { transform: translate(-8px, 3px) rotate(-1deg); }
-      80% { transform: translate(8px, -3px) rotate(1deg); }
-      90% { transform: translate(-2px, 6px) rotate(-2deg); }
-    }
-
-    @keyframes flashRed {
-      0%, 49% { filter: hue-rotate(0deg) saturate(5) brightness(1.5); }
-      50%, 100% { filter: hue-rotate(30deg) saturate(3) brightness(2); }
-    }
-
-    @keyframes redFlashBg {
-      0%, 49% { background: #000; }
-      50%, 100% { background: #1a0000; }
-    }
-
-    .red-flash { animation: redFlashBg 0.15s infinite; }
-  </style>
+/* ── ANİMASYONLAR ── */
+@keyframes bgFlash{0%,49%{background:#000}50%,100%{background:#1a0000}}
+@keyframes shakeEl{
+  0%{transform:translate(0,0) rotate(0deg) scale(1)}
+  10%{transform:translate(-12px,-8px) rotate(-3deg) scale(1.02)}
+  20%{transform:translate(12px,8px) rotate(3deg) scale(.98)}
+  30%{transform:translate(-8px,12px) rotate(-2deg) scale(1.03)}
+  40%{transform:translate(8px,-12px) rotate(2deg) scale(.97)}
+  50%{transform:translate(-6px,6px) rotate(-3deg) scale(1.01)}
+  60%{transform:translate(6px,-6px) rotate(3deg) scale(.99)}
+  70%{transform:translate(-10px,4px) rotate(-2deg) scale(1.02)}
+  80%{transform:translate(10px,-4px) rotate(2deg) scale(.98)}
+  90%{transform:translate(-4px,10px) rotate(-3deg) scale(1.01)}
+}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+#sIntro,#sResult{animation:fadeIn .5s ease}
+</style>
 </head>
 <body>
 
-  <!-- INTRO -->
-  <div id="intro">
-    <h1>🎯 KONSANTRASYON TESTİ</h1>
-    <p>
-      Kırmızı noktayı mümkün olduğunca uzun süre takip et.<br/>
-      Gözlerini kırpma. Konsantrasyonunu koru.<br/>
-      <strong style="color:#ff4444">Sadece 30 saniye!</strong>
-    </p>
-    <div class="warning">
-      ⚠️ Epilepsi uyarısı: Hızlı yanıp sönen ışıklar içerir.
-    </div>
-    <button id="startBtn" onclick="startGame()">▶ BAŞLA</button>
-  </div>
+<!-- ════════ INTRO ════════ -->
+<div class="screen active" id="sIntro">
+  <h1>🎯 KONSANTRASYON TESTİ</h1>
+  <p class="sub">
+    Kırmızı noktayı gözlerinle takip et.<br/>
+    Gözlerini kırpma — <strong style="color:#a855f7">30 saniye</strong> boyunca odaklan.<br/>
+    Konsantrasyon seviyeni ölç!
+  </p>
+  <div class="warn">⚠️ Ani sesli içerik barındırabilir. Kulaklık kullanıyorsan dikkat.</div>
+  <button class="btn btn-primary" onclick="show('sGame');startGame()">▶ BAŞLA</button>
+</div>
 
-  <!-- OYUN -->
-  <div id="game">
-    <div id="instructions">Kırmızı noktayı gözlerinle takip et...</div>
-    <div id="dotContainer">
-      <div id="dot"></div>
-    </div>
-    <div id="timerBar">
-      <div id="timerFill"></div>
-    </div>
-    <div id="score">SÜRE: <span id="timeLeft">30</span>s &nbsp;|&nbsp; TAKIP: <span id="trackScore">0</span></div>
-  </div>
-
-  <!-- JUMPSCARE -->
-  <div id="jumpscare">
-    <div id="jumpscareImg">👹</div>
-    <div id="jumpscareText">BOO!!!</div>
-    <div id="jumpscareSubtext">Korkuttum mu? 😈</div>
-  </div>
-
-  <!-- SONUÇ -->
-  <div id="result">
-    <h2 id="resultTitle"></h2>
-    <p id="resultDesc"></p>
-    <div>
-      <button id="retryBtn" onclick="reset()">🔄 Tekrar Dene</button>
-      <button id="shareBtn" onclick="shareResult()">📢 Arkadaşlara Gönder</button>
+<!-- ════════ OYUN ════════ -->
+<div class="screen" id="sGame">
+  <div id="gameTitle">NOKTAYI TAKİP ET</div>
+  <div id="arena"><div id="dot"></div></div>
+  <div id="timerWrap">
+    <div id="timerBar"><div id="timerFill"></div></div>
+    <div id="hud">
+      <span>SÜRE: <strong id="tLeft" style="color:#fff">30</strong>s</span>
+      <span>PUAN: <strong id="pts" style="color:#a855f7">0</strong></span>
     </div>
   </div>
+</div>
 
-  <audio id="screamAudio" preload="auto">
-    <!-- Base64 encoded short beep as fallback -->
-  </audio>
+<!-- ════════ JUMPSCARE ════════ -->
+<div class="screen" id="sJump">
+  <!-- Korkunç yüz — tamamen SVG içinde gömülü, harici dosya yok -->
+  <svg id="jumpFace" viewBox="0 0 400 380" xmlns="http://www.w3.org/2000/svg">
+    <!-- Arka plan / gölge -->
+    <defs>
+      <radialGradient id="bg" cx="50%" cy="50%" r="50%">
+        <stop offset="0%" stop-color="#3a0000"/>
+        <stop offset="100%" stop-color="#000"/>
+      </radialGradient>
+      <filter id="glow">
+        <feGaussianBlur stdDeviation="3" result="blur"/>
+        <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+      </filter>
+      <filter id="creep">
+        <feTurbulence type="turbulence" baseFrequency="0.02" numOctaves="3" result="noise"/>
+        <feDisplacementMap in="SourceGraphic" in2="noise" scale="4" xChannelSelector="R" yChannelSelector="G"/>
+      </filter>
+    </defs>
+    <rect width="400" height="380" fill="url(#bg)"/>
 
-  <script>
-    const GAME_DURATION = 30; // saniye
-    const JUMPSCARE_DELAY_MIN = 8;  // en erken kaç saniyede
-    const JUMPSCARE_DELAY_MAX = 25; // en geç kaç saniyede
+    <!-- Kafatası şekli -->
+    <ellipse cx="200" cy="165" rx="130" ry="145" fill="#c8b89a" filter="url(#creep)"/>
+    <ellipse cx="200" cy="270" rx="75" ry="55" fill="#c8b89a"/>
 
-    let gameInterval = null;
-    let dotInterval = null;
-    let timeLeft = GAME_DURATION;
-    let trackScore = 0;
-    let jumpscareTriggered = false;
-    let jumpscareTimeout = null;
+    <!-- Çene kemiği detayları -->
+    <path d="M135 260 Q145 310 165 325 Q185 338 200 340 Q215 338 235 325 Q255 310 265 260" fill="#b8a88a" stroke="#8a7a6a" stroke-width="1"/>
+    <!-- Diş çizgisi -->
+    <line x1="162" y1="318" x2="162" y2="335" stroke="#f5f0e8" stroke-width="3"/>
+    <line x1="177" y1="323" x2="177" y2="338" stroke="#f5f0e8" stroke-width="3"/>
+    <line x1="192" y1="326" x2="192" y2="340" stroke="#f5f0e8" stroke-width="3"/>
+    <line x1="207" y1="326" x2="207" y2="340" stroke="#f5f0e8" stroke-width="3"/>
+    <line x1="222" y1="323" x2="222" y2="338" stroke="#f5f0e8" stroke-width="3"/>
+    <line x1="237" y1="318" x2="237" y2="335" stroke="#f5f0e8" stroke-width="3"/>
 
-    const emojis = ['👹', '🎃', '💀', '👻', '😱', '🙀', '👁️'];
-    const messages = [
-      'BOO!!!', 'AAAAAH!!!', 'GÖRDÜM SENİ!!!', 'ARKANDA!!!', 'KAÇAMAZSIN!!!'
-    ];
+    <!-- Sol göz yuvası -->
+    <ellipse cx="152" cy="155" rx="38" ry="32" fill="#0a0000"/>
+    <!-- Sağ göz yuvası -->
+    <ellipse cx="248" cy="155" rx="38" ry="32" fill="#0a0000"/>
 
-    function startGame() {
-      document.getElementById('intro').style.display = 'none';
-      const game = document.getElementById('game');
-      game.style.display = 'flex';
+    <!-- Sol göz - kanlı -->
+    <circle cx="152" cy="155" r="24" fill="#cc0000"/>
+    <circle cx="152" cy="155" r="14" fill="#1a0000"/>
+    <circle cx="152" cy="155" r="7" fill="#000"/>
+    <!-- Göz damarları sol -->
+    <line x1="128" y1="148" x2="145" y2="152" stroke="#ff0000" stroke-width="1.5" opacity=".8"/>
+    <line x1="130" y1="162" x2="143" y2="158" stroke="#ff0000" stroke-width="1" opacity=".7"/>
+    <line x1="148" y1="132" x2="151" y2="142" stroke="#ff0000" stroke-width="1" opacity=".7"/>
+    <!-- Göz parlaması sol -->
+    <circle cx="158" cy="149" r="4" fill="rgba(255,255,255,0.15)"/>
 
-      timeLeft = GAME_DURATION;
-      trackScore = 0;
-      jumpscareTriggered = false;
+    <!-- Sağ göz - kanlı -->
+    <circle cx="248" cy="155" r="24" fill="#cc0000"/>
+    <circle cx="248" cy="155" r="14" fill="#1a0000"/>
+    <circle cx="248" cy="155" r="7" fill="#000"/>
+    <!-- Göz damarları sağ -->
+    <line x1="272" y1="148" x2="255" y2="152" stroke="#ff0000" stroke-width="1.5" opacity=".8"/>
+    <line x1="270" y1="162" x2="257" y2="158" stroke="#ff0000" stroke-width="1" opacity=".7"/>
+    <line x1="252" y1="132" x2="249" y2="142" stroke="#ff0000" stroke-width="1" opacity=".7"/>
+    <!-- Göz parlaması sağ -->
+    <circle cx="254" cy="149" r="4" fill="rgba(255,255,255,0.15)"/>
 
-      // Dot hareketi
-      moveDot();
-      dotInterval = setInterval(moveDot, 600);
+    <!-- Burun deliği sol -->
+    <ellipse cx="188" cy="210" rx="12" ry="16" fill="#0d0000"/>
+    <!-- Burun deliği sağ -->
+    <ellipse cx="212" cy="210" rx="12" ry="16" fill="#0d0000"/>
+    <!-- Burun kemiği -->
+    <path d="M197 170 Q200 205 203 170" fill="none" stroke="#a09080" stroke-width="2" opacity=".5"/>
 
-      // Sayaç
-      gameInterval = setInterval(() => {
-        timeLeft--;
-        document.getElementById('timeLeft').textContent = timeLeft;
-        const pct = (timeLeft / GAME_DURATION) * 100;
-        document.getElementById('timerFill').style.width = pct + '%';
-        trackScore += Math.floor(Math.random() * 3) + 1;
-        document.getElementById('trackScore').textContent = trackScore;
+    <!-- Ağız — açık, çığlık atan -->
+    <path d="M148 265 Q175 245 200 248 Q225 245 252 265 Q240 310 200 320 Q160 310 148 265Z" fill="#1a0000"/>
+    <!-- Ağız iç -->
+    <path d="M155 270 Q175 255 200 257 Q225 255 245 270 Q235 305 200 313 Q165 305 155 270Z" fill="#3a0000"/>
+    <!-- Üst dişler -->
+    <rect x="164" y="265" width="14" height="22" rx="3" fill="#f0ebe0"/>
+    <rect x="182" y="260" width="14" height="26" rx="3" fill="#f0ebe0"/>
+    <rect x="200" y="258" width="14" height="28" rx="3" fill="#f0ebe0"/>
+    <rect x="218" y="260" width="14" height="26" rx="3" fill="#f0ebe0"/>
+    <!-- Alt dişler -->
+    <rect x="170" y="298" width="12" height="18" rx="3" fill="#e8e3d8"/>
+    <rect x="187" y="302" width="12" height="14" rx="3" fill="#e8e3d8"/>
+    <rect x="204" y="302" width="12" height="14" rx="3" fill="#e8e3d8"/>
+    <rect x="221" y="298" width="12" height="18" rx="3" fill="#e8e3d8"/>
+    <!-- Dil -->
+    <ellipse cx="200" cy="296" rx="22" ry="14" fill="#8b1a1a"/>
 
-        if (timeLeft <= 0) {
-          clearInterval(gameInterval);
-          clearInterval(dotInterval);
-          clearTimeout(jumpscareTimeout);
-          showResult(true);
-        }
-      }, 1000);
+    <!-- Kan damlaları -->
+    <path d="M152 180 Q149 192 152 196 Q155 192 152 180Z" fill="#cc0000" opacity=".9"/>
+    <path d="M248 178 Q245 190 248 194 Q251 190 248 178Z" fill="#cc0000" opacity=".9"/>
+    <path d="M186 320 Q183 340 187 346 Q190 340 186 320Z" fill="#cc0000" opacity=".8"/>
+    <path d="M210 322 Q207 338 211 344 Q214 338 210 322Z" fill="#cc0000" opacity=".8"/>
 
-      // Jumpscare zamanı — rastgele
-      const delay = (Math.random() * (JUMPSCARE_DELAY_MAX - JUMPSCARE_DELAY_MIN) + JUMPSCARE_DELAY_MIN) * 1000;
-      jumpscareTimeout = setTimeout(() => {
-        if (!jumpscareTriggered) triggerJumpscare();
-      }, delay);
-    }
+    <!-- Alın çatlakları -->
+    <path d="M170 80 Q175 95 168 108" fill="none" stroke="#7a6a5a" stroke-width="2" opacity=".6"/>
+    <path d="M200 70 Q205 88 198 100" fill="none" stroke="#7a6a5a" stroke-width="1.5" opacity=".5"/>
+    <path d="M228 82 Q232 96 226 110" fill="none" stroke="#7a6a5a" stroke-width="2" opacity=".6"/>
 
-    function moveDot() {
-      const container = document.getElementById('dotContainer');
-      const dot = document.getElementById('dot');
-      const maxX = container.clientWidth - 22;
-      const maxY = container.clientHeight - 22;
-      const x = Math.random() * maxX;
-      const y = Math.random() * maxY;
-      dot.style.left = x + 'px';
-      dot.style.top = y + 'px';
-    }
+    <!-- Kaşlar — V şekli, kızgın -->
+    <path d="M115 128 Q140 115 165 122" fill="none" stroke="#3a2a1a" stroke-width="8" stroke-linecap="round"/>
+    <path d="M235 122 Q260 115 285 128" fill="none" stroke="#3a2a1a" stroke-width="8" stroke-linecap="round"/>
 
-    function triggerJumpscare() {
-      jumpscareTriggered = true;
-      clearInterval(gameInterval);
-      clearInterval(dotInterval);
+    <!-- Glow efekti gözler için -->
+    <ellipse cx="152" cy="155" rx="30" ry="25" fill="none" stroke="#ff0000" stroke-width="2" opacity=".4" filter="url(#glow)"/>
+    <ellipse cx="248" cy="155" rx="30" ry="25" fill="none" stroke="#ff0000" stroke-width="2" opacity=".4" filter="url(#glow)"/>
 
-      const js = document.getElementById('jumpscare');
-      const img = document.getElementById('jumpscareImg');
-      const text = document.getElementById('jumpscareText');
+    <!-- Alt yazı -->
+    <text x="200" y="370" text-anchor="middle" fill="#ff0000" font-size="18" font-family="serif" opacity=".8">☠ SENI BULDUM ☠</text>
+  </svg>
+  <div id="jumpText">BOO!!!</div>
+  <div id="jumpSub">😈 Korkutabildim mi?</div>
+</div>
 
-      img.textContent = emojis[Math.floor(Math.random() * emojis.length)];
-      text.textContent = messages[Math.floor(Math.random() * messages.length)];
+<!-- ════════ SONUÇ ════════ -->
+<div class="screen" id="sResult">
+  <h2 id="rTitle"></h2>
+  <p class="desc" id="rDesc"></p>
+  <div class="btnRow">
+    <button class="btn btn-sec" onclick="restart()">🔄 Tekrar Dene</button>
+    <button class="btn btn-primary" onclick="share()" style="padding:14px 32px">📢 Arkadaşlara Gönder</button>
+  </div>
+</div>
 
-      // Ses efekti — Web Audio API ile ani tiz ses
-      playScream();
+<script>
+// ════ DURUM ════
+const TOTAL = 30;
+let timer, dotTimer, jsTimer;
+let tLeft = TOTAL, pts = 0, scared = false;
 
-      js.style.display = 'flex';
-      js.classList.add('red-flash');
-      document.getElementById('game').style.display = 'none';
+// ════ EKRAN GEÇİŞİ ════
+function show(id){
+  document.querySelectorAll('.screen').forEach(s=>{s.classList.remove('active')});
+  document.getElementById(id).classList.add('active');
+}
 
-      // 3 saniye sonra sonuç ekranı
-      setTimeout(() => {
-        js.style.display = 'none';
-        js.classList.remove('red-flash');
-        showResult(false);
-      }, 3000);
-    }
+// ════ OYUN BAŞLAT ════
+function startGame(){
+  tLeft = TOTAL; pts = 0; scared = false;
+  document.getElementById('tLeft').textContent = TOTAL;
+  document.getElementById('pts').textContent = 0;
+  document.getElementById('timerFill').style.width = '100%';
 
-    function playScream() {
-      try {
-        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+  moveDot();
+  dotTimer = setInterval(moveDot, 550);
 
-        // Ani yüksek frekanslı ses — gerçek scream efekti
-        const osc1 = ctx.createOscillator();
-        const osc2 = ctx.createOscillator();
-        const gainNode = ctx.createGain();
+  timer = setInterval(()=>{
+    tLeft--;
+    pts += Math.floor(Math.random()*4)+2;
+    document.getElementById('tLeft').textContent = tLeft;
+    document.getElementById('pts').textContent = pts;
+    document.getElementById('timerFill').style.width = (tLeft/TOTAL*100)+'%';
+    if(tLeft <= 0){ clearAll(); result(true); }
+  }, 1000);
 
-        osc1.type = 'sawtooth';
-        osc2.type = 'square';
+  // Jumpscare: 7-24. saniye arası rastgele
+  const delay = (Math.random()*(24-7)+7)*1000;
+  jsTimer = setTimeout(()=>{ if(!scared) jumpscare(); }, delay);
+}
 
-        osc1.frequency.setValueAtTime(800, ctx.currentTime);
-        osc1.frequency.exponentialRampToValueAtTime(200, ctx.currentTime + 0.8);
+// ════ DOT HAREKET ════
+function moveDot(){
+  const a = document.getElementById('arena');
+  const d = document.getElementById('dot');
+  d.style.left = (Math.random()*(a.clientWidth-24))+'px';
+  d.style.top  = (Math.random()*(a.clientHeight-24))+'px';
+}
 
-        osc2.frequency.setValueAtTime(1200, ctx.currentTime);
-        osc2.frequency.exponentialRampToValueAtTime(100, ctx.currentTime + 0.6);
+// ════ JUMPSCARE ════
+function jumpscare(){
+  scared = true; clearAll();
+  const msgs = ['BOO!!!','AAAAAH!!!','ARKANDA!!!','KAÇAMAZSIN!!!','GELİYORUM!!!'];
+  document.getElementById('jumpText').textContent = msgs[Math.floor(Math.random()*msgs.length)];
+  show('sJump');
+  scream();
+  setTimeout(()=>{ result(false); }, 3200);
+}
 
-        gainNode.gain.setValueAtTime(0.8, ctx.currentTime);
-        gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 1);
+// ════ SES ════
+function scream(){
+  try{
+    const ctx = new(window.AudioContext||window.webkitAudioContext)();
 
-        osc1.connect(gainNode);
-        osc2.connect(gainNode);
-        gainNode.connect(ctx.destination);
+    // Katman 1: yüksek çığlık sweep
+    const o1 = ctx.createOscillator();
+    const g1 = ctx.createGain();
+    o1.type = 'sawtooth';
+    o1.frequency.setValueAtTime(1100, ctx.currentTime);
+    o1.frequency.exponentialRampToValueAtTime(180, ctx.currentTime+1.2);
+    g1.gain.setValueAtTime(0.9, ctx.currentTime);
+    g1.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime+1.4);
+    o1.connect(g1); g1.connect(ctx.destination);
+    o1.start(); o1.stop(ctx.currentTime+1.4);
 
-        osc1.start(ctx.currentTime);
-        osc2.start(ctx.currentTime);
-        osc1.stop(ctx.currentTime + 1);
-        osc2.stop(ctx.currentTime + 1);
-      } catch (e) {
-        // Ses çalamadıysa geç
-      }
-    }
+    // Katman 2: düşük uğultu
+    const o2 = ctx.createOscillator();
+    const g2 = ctx.createGain();
+    o2.type = 'square';
+    o2.frequency.setValueAtTime(60, ctx.currentTime);
+    o2.frequency.exponentialRampToValueAtTime(30, ctx.currentTime+1);
+    g2.gain.setValueAtTime(0.5, ctx.currentTime);
+    g2.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime+1.2);
+    o2.connect(g2); g2.connect(ctx.destination);
+    o2.start(); o2.stop(ctx.currentTime+1.2);
 
-    function showResult(survived) {
-      document.getElementById('game').style.display = 'none';
-      const result = document.getElementById('result');
-      result.style.display = 'block';
+    // Katman 3: beyaz gürültü patlaması
+    const bufLen = ctx.sampleRate*0.4;
+    const buf = ctx.createBuffer(1, bufLen, ctx.sampleRate);
+    const data = buf.getChannelData(0);
+    for(let i=0;i<bufLen;i++) data[i]=(Math.random()*2-1);
+    const noise = ctx.createBufferSource();
+    const gn = ctx.createGain();
+    noise.buffer = buf;
+    gn.gain.setValueAtTime(0.7, ctx.currentTime);
+    gn.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime+0.5);
+    noise.connect(gn); gn.connect(ctx.destination);
+    noise.start();
+  }catch(e){}
+}
 
-      if (survived) {
-        document.getElementById('resultTitle').innerHTML = '🏆 DAYANDIN!';
-        document.getElementById('resultTitle').style.color = '#00ff88';
-        document.getElementById('resultDesc').innerHTML =
-          `${GAME_DURATION} saniyeyi atlattın!<br/>Konsantrasyon skoru: <strong style="color:#00ff88">${trackScore}</strong> puan<br/><br/>Arkadaşlarına gönder, bakalım onlar da dayanabilecek mi? 😏`;
-      } else {
-        document.getElementById('resultTitle').innerHTML = '😂 KORKTU!!!';
-        document.getElementById('resultTitle').style.color = '#ff4444';
-        document.getElementById('resultDesc').innerHTML =
-          `${GAME_DURATION - timeLeft} saniyede korktun!<br/>Konsantrasyon skoru: <strong style="color:#ffcc00">${trackScore}</strong> puan<br/><br/>Bunu arkadaşlarına yolla da onlar da denesin! 😈`;
-      }
-    }
+// ════ SONUÇ ════
+function result(survived){
+  show('sResult');
+  if(survived){
+    document.getElementById('rTitle').innerHTML='🏆 DAYANDIN!';
+    document.getElementById('rTitle').style.color='#00ff88';
+    document.getElementById('rDesc').innerHTML=
+      `30 saniyeyi atlattın!<br/>Konsantrasyon puanın: <strong style="color:#a855f7">${pts}</strong><br/><br/>
+      Arkadaşlarına gönder, bakalım onlar da dayanabilecek mi? 😏`;
+  } else {
+    document.getElementById('rTitle').innerHTML='😂 KORKTU!!!';
+    document.getElementById('rTitle').style.color='#ff4444';
+    document.getElementById('rDesc').innerHTML=
+      `${TOTAL-tLeft}. saniyede korktun!<br/>Konsantrasyon puanın: <strong style="color:#ffcc00">${pts}</strong><br/><br/>
+      Bunu arkadaşlarına yolla, onlar da denesin! 😈`;
+  }
+}
 
-    function reset() {
-      document.getElementById('result').style.display = 'none';
-      document.getElementById('jumpscare').style.display = 'none';
-      document.getElementById('intro').style.display = 'block';
-      clearInterval(gameInterval);
-      clearInterval(dotInterval);
-      clearTimeout(jumpscareTimeout);
-    }
+// ════ PAYLAŞ ════
+function share(){
+  const url = window.location.href;
+  const text = `🎯 Bu konsantrasyon testini yaptım — sen de 30 saniye dayanabilir misin? 😈`;
+  if(navigator.share){ navigator.share({title:'Konsantrasyon Testi',text,url}); }
+  else if(navigator.clipboard){
+    navigator.clipboard.writeText(url+'\n\n'+text).then(()=>alert('Link kopyalandı! Arkadaşlarına gönder 😈'));
+  } else { prompt('Kopyala ve gönder:',url); }
+}
 
-    function shareResult() {
-      const url = window.location.href;
-      const text = `🎯 Konsantrasyon testini yaptım! Sen de dene — dayanabilecek misin? ${url}`;
-      if (navigator.share) {
-        navigator.share({ title: 'Konsantrasyon Testi', text, url });
-      } else if (navigator.clipboard) {
-        navigator.clipboard.writeText(url).then(() => alert('Link kopyalandı! Arkadaşlara gönder 😈'));
-      } else {
-        prompt('Bu linki kopyala ve arkadaşlarına gönder:', url);
-      }
-    }
+// ════ TEKRAR ════
+function restart(){ clearAll(); show('sIntro'); }
 
-    // Keyboard: Escape ile çıkış
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') reset();
-    });
-  </script>
+function clearAll(){
+  clearInterval(timer); clearInterval(dotTimer); clearTimeout(jsTimer);
+}
+
+// ESC ile sıfırla
+document.addEventListener('keydown',e=>{ if(e.key==='Escape') restart(); });
+</script>
 </body>
 </html>
