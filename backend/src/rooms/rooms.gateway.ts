@@ -12,7 +12,7 @@ import { Logger, UseGuards } from '@nestjs/common';
 import { RoomsService } from './rooms.service';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
-import { RedisService } from '../redis/redis.service';
+import { SocketStateService } from '../socket-state/socket-state.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 
 @WebSocketGateway({
@@ -43,7 +43,7 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private readonly roomsService: RoomsService,
     private readonly jwtService: JwtService,
     private readonly config: ConfigService,
-    private readonly redis: RedisService,
+    private readonly socketState: SocketStateService,
     private readonly eventEmitter: EventEmitter2,
   ) {}
 
@@ -65,8 +65,7 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       client.data.userId = payload.sub;
       client.data.username = payload.username;
 
-      await this.redis.hset('socket:users', client.id, payload.sub);
-      await this.redis.set(`user:socket:${payload.sub}`, client.id);
+      this.socketState.setUserSocket(payload.sub, client.id);
 
       this.logger.log(`Client connected: ${client.id} (${payload.username})`);
     } catch {
@@ -75,11 +74,8 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   async handleDisconnect(client: Socket) {
-    const userId = client.data.userId;
+    const userId = this.socketState.removeSocket(client.id);
     if (userId) {
-      await this.redis.hdel('socket:users', client.id);
-      await this.redis.del(`user:socket:${userId}`);
-
       const rooms = Array.from(client.rooms);
       for (const room of rooms) {
         if (room.startsWith('room:')) {
@@ -164,7 +160,7 @@ if (result.allReady) {
 
     try {
       await this.roomsService.kickPlayer(userId, data.roomId, data.targetUserId);
-      const targetSocket = await this.redis.get(`user:socket:${data.targetUserId}`);
+      const targetSocket = this.socketState.getUserSocket(data.targetUserId);
 
       if (targetSocket) {
         const targetClient = this.server.sockets.sockets.get(targetSocket);
@@ -329,7 +325,7 @@ this.server.to(`room:${data.roomId}`).emit('lobby:chat', {
     const userId = client.data.userId;
     if (!userId) return;
 
-    const targetSocket = await this.redis.get(`user:socket:${data.targetUserId}`);
+    const targetSocket = this.socketState.getUserSocket(data.targetUserId);
     if (targetSocket) {
       const targetClient = this.server.sockets.sockets.get(targetSocket);
       if (targetClient) {
@@ -359,10 +355,9 @@ async broadcastRoomList(): Promise<void> {
   }
 
   emitToUser(userId: string, event: string, data: unknown): void {
-    this.redis.get(`user:socket:${userId}`).then((socketId) => {
-      if (socketId) {
-        this.server.to(socketId).emit(event, data);
-      }
-    });
+    const socketId = this.socketState.getUserSocket(userId);
+    if (socketId) {
+      this.server.to(socketId).emit(event, data);
+    }
   }
 }

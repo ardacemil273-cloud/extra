@@ -7,7 +7,6 @@ import {
   Logger,
 } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
-import { RedisService } from '../redis/redis.service';
 import { CreateRoomDto } from './dto/create-room.dto';
 import { RoomStatus } from '@prisma/client';
 import { nanoid } from 'nanoid';
@@ -17,10 +16,7 @@ import * as bcrypt from 'bcryptjs';
 export class RoomsService {
   private readonly logger = new Logger(RoomsService.name);
 
-  constructor(
-    private readonly prisma: PrismaService,
-    private readonly redis: RedisService,
-  ) {}
+  constructor(private readonly prisma: PrismaService) {}
 
   async createRoom(hostId: string, dto: CreateRoomDto) {
     const existing = await this.prisma.roomPlayer.findFirst({
@@ -50,7 +46,6 @@ export class RoomsService {
       include: this.getRoomInclude(),
     });
 
-    await this.redis.setJson(`room:${room.id}`, { id: room.id, code: room.code }, 3600);
     return room;
   }
 

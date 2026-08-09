@@ -1,21 +1,16 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { RedisService } from '../redis/redis.service';
 import { GameState, GamePlayer, GamePhase, GameTimer } from './interfaces/game.interfaces';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { v4 as uuidv4 } from 'uuid';
 
-const GAME_STATE_TTL = 7200; // 2 hours
-
 @Injectable()
 export class GameEngineService {
   private readonly logger = new Logger(GameEngineService.name);
+  private readonly gameStates = new Map<string, GameState>();
 
-  constructor(
-    private readonly redis: RedisService,
-    private readonly eventEmitter: EventEmitter2,
-  ) {}
+  constructor(private readonly eventEmitter: EventEmitter2) {}
 
-  async createGameState(roomId: string, gameType: string, players: GamePlayer[]): Promise<GameState> {
+  createGameState(roomId: string, gameType: string, players: GamePlayer[]): GameState {
     const playersMap: Record<string, GamePlayer> = {};
     for (const p of players) {
       playersMap[p.userId] = { ...p, votes: 0, votedFor: null, actionDone: false };
@@ -43,34 +38,34 @@ export class GameEngineService {
       createdAt: Date.now(),
     };
 
-    await this.saveState(roomId, state);
+    this.saveState(roomId, state);
     return state;
   }
 
-  async getState(roomId: string): Promise<GameState | null> {
-    return this.redis.getJson<GameState>(`game:state:${roomId}`);
+  getState(roomId: string): GameState | null {
+    return this.gameStates.get(roomId) || null;
   }
 
-  async saveState(roomId: string, state: GameState): Promise<void> {
-    await this.redis.setJson(`game:state:${roomId}`, state, GAME_STATE_TTL);
+  saveState(roomId: string, state: GameState): void {
+    this.gameStates.set(roomId, state);
   }
 
-  async updateState(
+  updateState(
     roomId: string,
     updater: (state: GameState) => GameState,
-  ): Promise<GameState | null> {
-    const state = await this.getState(roomId);
+  ): GameState | null {
+    const state = this.getState(roomId);
     if (!state) return null;
     const updated = updater(state);
-    await this.saveState(roomId, updated);
+    this.saveState(roomId, updated);
     return updated;
   }
 
-  async setPhase(roomId: string, phase: GamePhase): Promise<GameState | null> {
+  setPhase(roomId: string, phase: GamePhase): GameState | null {
     return this.updateState(roomId, (s) => ({ ...s, phase, votes: [], events: [...s.events, { type: 'PHASE_CHANGE', payload: { phase }, timestamp: Date.now() }] }));
   }
 
-  async startTimer(roomId: string, duration: number): Promise<void> {
+  startTimer(roomId: string, duration: number): void {
     const timer: GameTimer = {
       id: uuidv4(),
       duration,
@@ -78,22 +73,22 @@ export class GameEngineService {
       active: true,
     };
 
-    await this.updateState(roomId, (s) => ({ ...s, timer }));
+    this.updateState(roomId, (s) => ({ ...s, timer }));
     this.eventEmitter.emit('game.timer.started', { roomId, timer });
   }
 
-  async clearTimer(roomId: string): Promise<void> {
-    await this.updateState(roomId, (s) => ({ ...s, timer: null }));
+  clearTimer(roomId: string): void {
+    this.updateState(roomId, (s) => ({ ...s, timer: null }));
   }
 
-  async addEvent(roomId: string, type: string, payload: Record<string, unknown>): Promise<void> {
-    await this.updateState(roomId, (s) => ({
+  addEvent(roomId: string, type: string, payload: Record<string, unknown>): void {
+    this.updateState(roomId, (s) => ({
       ...s,
       events: [...s.events.slice(-50), { type, payload, timestamp: Date.now() }],
     }));
   }
 
-async castVote(roomId: string, voterId: string, targetId: string): Promise<GameState | null> {
+  castVote(roomId: string, voterId: string, targetId: string): GameState | null {
     return this.updateState(roomId, (s) => {
       // 🔒 SERVER AUTHORITATIVE: Oylama sadece DAY_VOTING fazında, hayattaki oyuncular tarafından ve kendine oy verilmeden yapılabilir
       if (s.phase !== 'DAY_VOTING') return s;
@@ -121,7 +116,7 @@ async castVote(roomId: string, voterId: string, targetId: string): Promise<GameS
     });
   }
 
-  async eliminatePlayer(roomId: string, userId: string): Promise<GameState | null> {
+  eliminatePlayer(roomId: string, userId: string): GameState | null {
     return this.updateState(roomId, (s) => {
       const players = { ...s.players };
       if (players[userId]) players[userId] = { ...players[userId], status: 'DEAD' };
@@ -129,7 +124,7 @@ async castVote(roomId: string, voterId: string, targetId: string): Promise<GameS
     });
   }
 
-  async assignRoles(roomId: string, roleMap: Record<string, { role: string; team: string }>): Promise<GameState | null> {
+  assignRoles(roomId: string, roleMap: Record<string, { role: string; team: string }>): GameState | null {
     return this.updateState(roomId, (s) => {
       const players = { ...s.players };
       for (const [userId, roleData] of Object.entries(roleMap)) {
@@ -155,7 +150,7 @@ async castVote(roomId: string, voterId: string, targetId: string): Promise<GameS
       .sort((a, b) => b.votes - a.votes);
   }
 
-  async deleteState(roomId: string): Promise<void> {
-    await this.redis.del(`game:state:${roomId}`);
+  deleteState(roomId: string): void {
+    this.gameStates.delete(roomId);
   }
 }

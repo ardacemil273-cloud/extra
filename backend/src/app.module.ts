@@ -5,7 +5,6 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ScheduleModule } from '@nestjs/schedule';
 import { CacheModule } from '@nestjs/cache-manager';
 import { DatabaseModule } from './database/database.module';
-import { RedisModule } from './redis/redis.module';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { ProfileModule } from './profile/profile.module';
@@ -15,6 +14,7 @@ import { RoomsModule } from './rooms/rooms.module';
 import { GameEngineModule } from './game-engine/game-engine.module';
 import { VoiceModule } from './voice/voice.module';
 import { HealthModule } from './health/health.module';
+import { SocketStateModule } from './socket-state/socket-state.module';
 import appConfig from './config/app.config';
 import authConfig from './config/auth.config';
 import databaseConfig from './config/database.config';
@@ -40,7 +40,6 @@ import databaseConfig from './config/database.config';
     ScheduleModule.forRoot(),
     CacheModule.register({ isGlobal: true, ttl: 60 }),
     DatabaseModule,
-    RedisModule,
     AuthModule,
     UsersModule,
     ProfileModule,
@@ -50,6 +49,7 @@ import databaseConfig from './config/database.config';
     GameEngineModule,
     VoiceModule,
     HealthModule,
+    SocketStateModule,
   ],
 })
 export class AppModule {}

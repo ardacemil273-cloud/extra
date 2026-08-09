@@ -2,7 +2,6 @@ import { Injectable, Logger, BadRequestException, ForbiddenException } from '@ne
 import { Server } from 'socket.io';
 import { GameEngineService } from '../../game-engine/game-engine.service';
 import { PrismaService } from '../../database/prisma.service';
-import { RedisService } from '../../redis/redis.service';
 import { UsersService } from '../../users/users.service';
 import { RoomStatus } from '@prisma/client';
 
@@ -60,11 +59,11 @@ const MAX_ACTIVE_ORDERS = 12;
 export class CafeRushService {
   private readonly logger = new Logger(CafeRushService.name);
   private timers: Map<string, NodeJS.Timeout> = new Map();
+  private readonly roomToMatchId = new Map<string, string>();
 
   constructor(
     private readonly gameEngine: GameEngineService,
     private readonly prisma: PrismaService,
-    private readonly redis: RedisService,
     private readonly usersService: UsersService,
   ) {}
 
@@ -112,7 +111,7 @@ export class CafeRushService {
     const match = await this.prisma.match.create({
       data: { roomId, gameType: 'cafe-rush', players: { create: players.map((p) => ({ userId: p.userId })) } },
     });
-    await this.redis.set(`game:match:${roomId}`, match.id);
+    this.roomToMatchId.set(roomId, match.id);
 
     server.to(`game:${roomId}`).emit('game:started', { gameType: 'cafe-rush', matchId: match.id });
     server.to(`game:${roomId}`).emit('cafe:state-update', cafe);
@@ -237,7 +236,7 @@ export class CafeRushService {
       players: results,
     });
 
-    const matchId = await this.redis.get(`game:match:${roomId}`);
+    const matchId = this.roomToMatchId.get(roomId);
     if (matchId) {
       await this.prisma.match.update({
         where: { id: matchId },

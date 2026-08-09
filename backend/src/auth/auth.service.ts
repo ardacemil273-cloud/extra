@@ -8,7 +8,7 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../database/prisma.service';
-import { RedisService } from '../redis/redis.service';
+import { SocketStateService } from '../socket-state/socket-state.service';
 import * as bcrypt from 'bcryptjs';
 import { nanoid } from 'nanoid';
 import { v4 as uuidv4 } from 'uuid';
@@ -38,7 +38,7 @@ export class AuthService {
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
     private readonly config: ConfigService,
-    private readonly redis: RedisService,
+    private readonly socketState: SocketStateService,
   ) {}
 
   async register(dto: RegisterDto): Promise<AuthTokens> {
@@ -185,7 +185,7 @@ export class AuthService {
       data: { isOnline: false, lastSeen: new Date() },
     });
 
-    await this.redis.del(`user:socket:${userId}`);
+    this.socketState.removeUserSocket(userId);
   }
 
   private async generateTokens(

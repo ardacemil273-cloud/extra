@@ -2,7 +2,7 @@ import { Injectable, Logger, ForbiddenException, BadRequestException } from '@ne
 import { Server } from 'socket.io';
 import { GameEngineService } from '../../game-engine/game-engine.service';
 import { PrismaService } from '../../database/prisma.service';
-import { RedisService } from '../../redis/redis.service';
+import { SocketStateService } from '../../socket-state/socket-state.service';
 import { UsersService } from '../../users/users.service';
 import { GameState, GamePlayer, GameResult } from '../../game-engine/interfaces/game.interfaces';
 import { RoomStatus } from '@prisma/client';
@@ -65,11 +65,12 @@ function pickRandom<T>(arr: T[]): T {
 export class VampireVillageService {
   private readonly logger = new Logger(VampireVillageService.name);
   private timers: Map<string, NodeJS.Timeout> = new Map();
+  private readonly roomToMatchId = new Map<string, string>();
 
   constructor(
     private readonly gameEngine: GameEngineService,
     private readonly prisma: PrismaService,
-    private readonly redis: RedisService,
+    private readonly socketState: SocketStateService,
     private readonly usersService: UsersService,
   ) {}
 
@@ -130,7 +131,7 @@ export class VampireVillageService {
       },
     });
 
-    await this.redis.set(`game:match:${roomId}`, match.id);
+    this.roomToMatchId.set(roomId, match.id);
 
     const roleMap = this.assignRoles(players, gameSettings);
     await this.gameEngine.assignRoles(roomId, roleMap);
@@ -139,7 +140,7 @@ const updatedState = await this.gameEngine.getState(roomId);
 
     // 🔒 ROLE LEAK PREVENTION: Her oyuncuya SADECE kendi rolünü gönder (socket.to(userId))
     for (const [userId, roleData] of Object.entries(roleMap)) {
-      const socketId = await this.redis.get(`user:game-socket:${userId}`);
+      const socketId = this.socketState.getGameSocket(userId);
       if (socketId) {
         server.to(socketId).emit('game:role-assigned', {
           userId,
@@ -220,7 +221,7 @@ const updatedState = await this.gameEngine.getState(roomId);
       narrator: pickRandom(narrators[role]),
     });
 
-    const socketId = await this.redis.get(`user:game-socket:${userId}`);
+    const socketId = this.socketState.getGameSocket(userId);
     if (socketId) {
       const alive = this.gameEngine.getAlivePlayers(state);
       const targets = alive.filter((p) => p.userId !== userId).map((p) => ({
@@ -278,7 +279,7 @@ const updatedState = await this.gameEngine.getState(roomId);
           detectiveResult: isVampire ? 'SUSPICIOUS' : 'INNOCENT',
           players: { ...s.players, [userId]: { ...s.players[userId], actionDone: true } },
         }));
-        const socketId = await this.redis.get(`user:game-socket:${userId}`);
+        const socketId = this.socketState.getGameSocket(userId);
         if (socketId) {
           server.to(socketId).emit('game:detective-result', {
             targetId,
@@ -444,7 +445,7 @@ const updatedState = await this.gameEngine.getState(roomId);
 
     await this.prisma.matchPlayer.updateMany({
       where: {
-        matchId: (await this.redis.get(`game:match:${roomId}`)) || '',
+        matchId: this.roomToMatchId.get(roomId) || '',
         userId: eliminated.userId,
       },
       data: { isAlive: false },
@@ -503,7 +504,7 @@ const updatedState = await this.gameEngine.getState(roomId);
       ),
     });
 
-    const matchId = await this.redis.get(`game:match:${roomId}`);
+    const matchId = this.roomToMatchId.get(roomId);
     if (matchId) {
       await this.prisma.match.update({
         where: { id: matchId },

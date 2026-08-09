@@ -11,7 +11,7 @@ import { Server, Socket } from 'socket.io';
 import { Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
-import { RedisService } from '../redis/redis.service';
+import { SocketStateService } from '../socket-state/socket-state.service';
 import { GameEngineService } from './game-engine.service';
 import { VampireVillageService } from '../games/vampire-village/vampire-village.service';
 import { FarmTogetherService } from '../games/farm-together/farm-together.service';
@@ -47,7 +47,7 @@ export class GameEngineGateway implements OnGatewayConnection, OnGatewayDisconne
   constructor(
     private readonly jwtService: JwtService,
     private readonly config: ConfigService,
-    private readonly redis: RedisService,
+    private readonly socketState: SocketStateService,
     private readonly gameEngine: GameEngineService,
     private readonly vampireVillage: VampireVillageService,
     private readonly farmTogether: FarmTogetherService,
@@ -71,7 +71,7 @@ export class GameEngineGateway implements OnGatewayConnection, OnGatewayDisconne
 
       client.data.userId = payload.sub;
       client.data.username = payload.username;
-      await this.redis.set(`user:game-socket:${payload.sub}`, client.id);
+      this.socketState.setGameSocket(payload.sub, client.id);
 
       this.logger.log(`Game socket connected: ${payload.username}`);
     } catch {
@@ -81,7 +81,7 @@ export class GameEngineGateway implements OnGatewayConnection, OnGatewayDisconne
 
   async handleDisconnect(client: Socket) {
     if (client.data.userId) {
-      await this.redis.del(`user:game-socket:${client.data.userId}`);
+      this.socketState.removeGameSocket(client.data.userId);
     }
   }
 
@@ -423,7 +423,7 @@ this.server.to(`game:${data.roomId}`).emit('game:chat', {
 
   @OnEvent('notification.created')
   async handleNotification(data: { userId: string; notification: unknown }) {
-    const socketId = await this.redis.get(`user:game-socket:${data.userId}`);
+    const socketId = this.socketState.getGameSocket(data.userId);
     if (socketId) {
       this.server.to(socketId).emit('notification:new', data.notification);
     }
@@ -457,8 +457,7 @@ this.server.to(`game:${data.roomId}`).emit('game:chat', {
   }
 
   emitToPlayer(userId: string, event: string, data: unknown): void {
-    this.redis.get(`user:game-socket:${userId}`).then((socketId) => {
-      if (socketId) this.server.to(socketId).emit(event, data);
-    });
+    const socketId = this.socketState.getGameSocket(userId);
+    if (socketId) this.server.to(socketId).emit(event, data);
   }
 }

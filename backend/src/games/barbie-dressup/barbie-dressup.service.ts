@@ -2,7 +2,6 @@ import { Injectable, Logger, BadRequestException, ForbiddenException } from '@ne
 import { Server } from 'socket.io';
 import { GameEngineService } from '../../game-engine/game-engine.service';
 import { PrismaService } from '../../database/prisma.service';
-import { RedisService } from '../../redis/redis.service';
 import { UsersService } from '../../users/users.service';
 import { RoomStatus } from '@prisma/client';
 
@@ -103,11 +102,11 @@ const BARBIE_PHRASES = ['Hi Barbie!', 'You can be anything!', 'Barbie fever!', '
 export class BarbieDressupService {
   private readonly logger = new Logger(BarbieDressupService.name);
   private timers: Map<string, NodeJS.Timeout> = new Map();
+  private readonly roomToMatchId = new Map<string, string>();
 
   constructor(
     private readonly gameEngine: GameEngineService,
     private readonly prisma: PrismaService,
-    private readonly redis: RedisService,
     private readonly usersService: UsersService,
   ) {}
 
@@ -159,7 +158,7 @@ export class BarbieDressupService {
     const match = await this.prisma.match.create({
       data: { roomId, gameType: 'barbie-dreamhouse', players: { create: players.map((p) => ({ userId: p.userId })) } },
     });
-    await this.redis.set(`game:match:${roomId}`, match.id);
+    this.roomToMatchId.set(roomId, match.id);
 
     server.to(`game:${roomId}`).emit('game:started', { gameType: 'barbie-dreamhouse', matchId: match.id });
     server.to(`game:${roomId}`).emit('barbie:state-update', barbie);
@@ -403,7 +402,7 @@ export class BarbieDressupService {
       players: results,
     });
 
-    const matchId = await this.redis.get(`game:match:${roomId}`);
+    const matchId = this.roomToMatchId.get(roomId);
     if (matchId) {
       await this.prisma.match.update({
         where: { id: matchId },

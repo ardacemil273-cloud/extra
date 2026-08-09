@@ -11,7 +11,7 @@ import { Server, Socket } from 'socket.io';
 import { Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
-import { RedisService } from '../redis/redis.service';
+import { SocketStateService } from '../socket-state/socket-state.service';
 
 interface VoiceState {
   userId: string;
@@ -33,7 +33,7 @@ export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
   constructor(
     private readonly jwtService: JwtService,
     private readonly config: ConfigService,
-    private readonly redis: RedisService,
+    private readonly socketState: SocketStateService,
   ) {}
 
   async handleConnection(client: Socket) {
@@ -123,15 +123,13 @@ export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() client: Socket,
     @MessageBody() data: { roomId: string; targetUserId: string; offer: RTCSessionDescriptionInit },
   ) {
-    const targetSocketKey = `user:game-socket:${data.targetUserId}`;
-    this.redis.get(targetSocketKey).then((socketId) => {
-      if (socketId) {
-        this.server.to(socketId).emit('voice:offer', {
-          fromUserId: client.data.userId,
-          offer: data.offer,
-        });
-      }
-    });
+    const socketId = this.socketState.getGameSocket(data.targetUserId);
+    if (socketId) {
+      this.server.to(socketId).emit('voice:offer', {
+        fromUserId: client.data.userId,
+        offer: data.offer,
+      });
+    }
   }
 
   @SubscribeMessage('voice:answer')
@@ -139,14 +137,13 @@ export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() client: Socket,
     @MessageBody() data: { roomId: string; targetUserId: string; answer: RTCSessionDescriptionInit },
   ) {
-    this.redis.get(`user:game-socket:${data.targetUserId}`).then((socketId) => {
-      if (socketId) {
-        this.server.to(socketId).emit('voice:answer', {
-          fromUserId: client.data.userId,
-          answer: data.answer,
-        });
-      }
-    });
+    const socketId = this.socketState.getGameSocket(data.targetUserId);
+    if (socketId) {
+      this.server.to(socketId).emit('voice:answer', {
+        fromUserId: client.data.userId,
+        answer: data.answer,
+      });
+    }
   }
 
   @SubscribeMessage('voice:ice-candidate')
@@ -154,14 +151,13 @@ export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() client: Socket,
     @MessageBody() data: { roomId: string; targetUserId: string; candidate: RTCIceCandidateInit },
   ) {
-    this.redis.get(`user:game-socket:${data.targetUserId}`).then((socketId) => {
-      if (socketId) {
-        this.server.to(socketId).emit('voice:ice-candidate', {
-          fromUserId: client.data.userId,
-          candidate: data.candidate,
-        });
-      }
-    });
+    const socketId = this.socketState.getGameSocket(data.targetUserId);
+    if (socketId) {
+      this.server.to(socketId).emit('voice:ice-candidate', {
+        fromUserId: client.data.userId,
+        candidate: data.candidate,
+      });
+    }
   }
 
   @SubscribeMessage('voice:mute')

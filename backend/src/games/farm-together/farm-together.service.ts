@@ -2,7 +2,6 @@ import { Injectable, Logger, BadRequestException, ForbiddenException } from '@ne
 import { Server } from 'socket.io';
 import { GameEngineService } from '../../game-engine/game-engine.service';
 import { PrismaService } from '../../database/prisma.service';
-import { RedisService } from '../../redis/redis.service';
 import { UsersService } from '../../users/users.service';
 import { RoomStatus } from '@prisma/client';
 
@@ -53,11 +52,11 @@ const GAME_DURATION = 300; // 5 minutes
 export class FarmTogetherService {
   private readonly logger = new Logger(FarmTogetherService.name);
   private timers: Map<string, NodeJS.Timeout> = new Map();
+  private readonly roomToMatchId = new Map<string, string>();
 
   constructor(
     private readonly gameEngine: GameEngineService,
     private readonly prisma: PrismaService,
-    private readonly redis: RedisService,
     private readonly usersService: UsersService,
   ) {}
 
@@ -123,7 +122,7 @@ export class FarmTogetherService {
       },
     });
 
-    await this.redis.set(`game:match:${roomId}`, match.id);
+    this.roomToMatchId.set(roomId, match.id);
 
     server.to(`game:${roomId}`).emit('game:started', { gameType: 'farm-together', matchId: match.id });
     server.to(`game:${roomId}`).emit('farm:state-update', farmState);
@@ -307,7 +306,7 @@ export class FarmTogetherService {
       players: results,
     });
 
-    const matchId = await this.redis.get(`game:match:${roomId}`);
+    const matchId = this.roomToMatchId.get(roomId);
     if (matchId) {
       await this.prisma.match.update({
         where: { id: matchId },
