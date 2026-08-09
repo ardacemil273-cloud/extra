@@ -1,23 +1,27 @@
 FROM node:20-alpine AS base
+
 RUN apk add --no-cache libc6-compat openssl
 WORKDIR /app
 
-# Dependencies
 FROM base AS deps
-COPY package*.json ./
-RUN npm ci --only=production && npm cache clean --force
 
-# Build
+COPY package*.json ./
+RUN npm ci --omit=dev && npm cache clean --force
+
 FROM base AS builder
+
 COPY package*.json ./
 RUN npm ci
+
 COPY . .
+
 RUN npx prisma generate
 RUN npm run build
 
-# Production
 FROM base AS runner
+
 ENV NODE_ENV=production
+
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nestjs
 
@@ -29,6 +33,7 @@ COPY --chown=nestjs:nodejs prisma ./prisma
 COPY --chown=nestjs:nodejs package*.json ./
 
 USER nestjs
+
 EXPOSE 4000
 
-CMD ["sh", "-c", "npx prisma migrate deploy && node dist/main"]
+CMD ["sh", "-c", "npx prisma migrate deploy; node dist/main.js"]
