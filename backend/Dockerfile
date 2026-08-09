@@ -4,13 +4,11 @@ FROM node:20-alpine AS base
 RUN apk add --no-cache libc6-compat openssl
 WORKDIR /app
 
-# Dependencies
 FROM base AS deps
 
 COPY package*.json ./
 RUN npm ci --omit=dev && npm cache clean --force
 
-# Build
 FROM base AS builder
 
 COPY package*.json ./
@@ -21,7 +19,6 @@ COPY . .
 RUN npx prisma generate
 RUN npm run build
 
-# Production
 FROM base AS runner
 
 ENV NODE_ENV=production
