@@ -1,4 +1,3 @@
-```ts
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
@@ -27,7 +26,7 @@ async function bootstrap() {
           styleSrc: ["'self'", "'unsafe-inline'"],
           scriptSrc: ["'self'"],
           imgSrc: ["'self'", 'data:', 'https:'],
-          connectSrc: ["'self'", 'wss:', 'ws:', 'https:'],
+          connectSrc: ["'self'", 'wss:', 'ws:'],
         },
       },
       crossOriginEmbedderPolicy: false,
@@ -39,17 +38,14 @@ async function bootstrap() {
       whitelist: true,
       forbidNonWhitelisted: true,
       transform: true,
-      transformOptions: {
-        enableImplicitConversion: true,
-      },
+      transformOptions: { enableImplicitConversion: true },
     }),
   );
 
   app.setGlobalPrefix('api/v1');
-
   app.useWebSocketAdapter(new IoAdapter(app));
 
-  const port = Number(process.env.PORT) || 8080;
+  const port = process.env.PORT || 4000;
 
   await app.listen(port, '0.0.0.0');
 
@@ -58,4 +54,3 @@ async function bootstrap() {
 }
 
 bootstrap();
-```
