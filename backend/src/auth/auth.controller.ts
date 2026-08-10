@@ -8,20 +8,20 @@ import {
   UseGuards,
   HttpCode,
   HttpStatus,
-} from '@nestjs/common';
-import { Response, Request } from 'express';
-import { AuthService } from './auth.service';
-import { RegisterDto } from './dto/register.dto';
-import { LoginDto } from './dto/login.dto';
-import { RefreshTokenDto } from './dto/refresh-token.dto';
-import { GoogleAuthGuard } from './guards/google-auth.guard';
-import { DiscordAuthGuard } from './guards/discord-auth.guard';
-import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
-import { CurrentUser } from '../common/decorators/current-user.decorator';
-import { Public } from '../common/decorators/public.decorator';
-import { Throttle } from '@nestjs/throttler';
+} from "@nestjs/common";
+import { Response, Request } from "express";
+import { AuthService } from "./auth.service";
+import { RegisterDto } from "./dto/register.dto";
+import { LoginDto } from "./dto/login.dto";
+import { RefreshTokenDto } from "./dto/refresh-token.dto";
+import { GoogleAuthGuard } from "./guards/google-auth.guard";
+import { DiscordAuthGuard } from "./guards/discord-auth.guard";
+import { JwtAuthGuard } from "../common/guards/jwt-auth.guard";
+import { CurrentUser } from "../common/decorators/current-user.decorator";
+import { Public } from "../common/decorators/public.decorator";
+import { Throttle } from "@nestjs/throttler";
 
-@Controller('auth')
+@Controller("auth")
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
@@ -30,7 +30,7 @@ export class AuthController {
   // =========================
 
   @Public()
-  @Post('register')
+  @Post("register")
   @Throttle({ default: { limit: 5, ttl: 60000 } })
   async register(@Body() dto: RegisterDto) {
     return this.authService.register(dto);
@@ -41,7 +41,7 @@ export class AuthController {
   // =========================
 
   @Public()
-  @Post('login')
+  @Post("login")
   @HttpCode(HttpStatus.OK)
   @Throttle({ default: { limit: 10, ttl: 60000 } })
   async login(@Body() dto: LoginDto) {
@@ -53,7 +53,7 @@ export class AuthController {
   // =========================
 
   @Public()
-  @Post('guest')
+  @Post("guest")
   @HttpCode(HttpStatus.OK)
   @Throttle({ default: { limit: 10, ttl: 60000 } })
   async loginAsGuest() {
@@ -65,7 +65,7 @@ export class AuthController {
   // =========================
 
   @Public()
-  @Post('refresh')
+  @Post("refresh")
   @HttpCode(HttpStatus.OK)
   async refreshTokens(@Body() dto: RefreshTokenDto) {
     return this.authService.refreshTokens(dto.refreshToken);
@@ -76,16 +76,16 @@ export class AuthController {
   // =========================
 
   @UseGuards(JwtAuthGuard)
-  @Post('logout')
+  @Post("logout")
   @HttpCode(HttpStatus.OK)
   async logout(
-    @CurrentUser('id') userId: string,
+    @CurrentUser("id") userId: string,
     @Body() dto: RefreshTokenDto,
   ) {
     await this.authService.logout(userId, dto.refreshToken);
 
     return {
-      message: 'Çıkış yapıldı',
+      message: "Çıkış yapıldı",
     };
   }
 
@@ -94,25 +94,19 @@ export class AuthController {
   // =========================
 
   @Public()
-  @Get('google')
+  @Get("google")
   @UseGuards(GoogleAuthGuard)
   googleAuth() {
     // GoogleAuthGuard handles the redirect.
   }
 
   @Public()
-  @Get('google/callback')
+  @Get("google/callback")
   @UseGuards(GoogleAuthGuard)
-  async googleCallback(
-    @Req() req: Request,
-    @Res() res: Response,
-  ) {
-    const tokens = await this.authService.oauthLogin(
-      req.user as any,
-    );
+  async googleCallback(@Req() req: Request, @Res() res: Response) {
+    const tokens = await this.authService.oauthLogin(req.user as any);
 
-    const frontendUrl =
-      process.env.FRONTEND_URL || 'http://localhost:3000';
+    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
 
     return res.redirect(
       `${frontendUrl}/auth/callback?accessToken=${encodeURIComponent(
@@ -126,25 +120,19 @@ export class AuthController {
   // =========================
 
   @Public()
-  @Get('discord')
+  @Get("discord")
   @UseGuards(DiscordAuthGuard)
   discordAuth() {
     // DiscordAuthGuard handles the redirect.
   }
 
   @Public()
-  @Get('discord/callback')
+  @Get("discord/callback")
   @UseGuards(DiscordAuthGuard)
-  async discordCallback(
-    @Req() req: Request,
-    @Res() res: Response,
-  ) {
-    const tokens = await this.authService.oauthLogin(
-      req.user as any,
-    );
+  async discordCallback(@Req() req: Request, @Res() res: Response) {
+    const tokens = await this.authService.oauthLogin(req.user as any);
 
-    const frontendUrl =
-      process.env.FRONTEND_URL || 'http://localhost:3000';
+    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
 
     return res.redirect(
       `${frontendUrl}/auth/callback?accessToken=${encodeURIComponent(
@@ -158,7 +146,7 @@ export class AuthController {
   // =========================
 
   @UseGuards(JwtAuthGuard)
-  @Get('me')
+  @Get("me")
   async getMe(@CurrentUser() user: any) {
     return user;
   }

@@ -6,18 +6,18 @@ import {
   OnGatewayDisconnect,
   ConnectedSocket,
   MessageBody,
-} from '@nestjs/websockets';
-import { Server, Socket } from 'socket.io';
-import { Logger, UseGuards } from '@nestjs/common';
-import { RoomsService } from './rooms.service';
-import { JwtService } from '@nestjs/jwt';
-import { ConfigService } from '@nestjs/config';
-import { SocketStateService } from '../socket-state/socket-state.service';
-import { EventEmitter2 } from '@nestjs/event-emitter';
+} from "@nestjs/websockets";
+import { Server, Socket } from "socket.io";
+import { Logger } from "@nestjs/common";
+import { RoomsService } from "./rooms.service";
+import { JwtService } from "@nestjs/jwt";
+import { ConfigService } from "@nestjs/config";
+import { SocketStateService } from "../socket-state/socket-state.service";
+import { EventEmitter2 } from "@nestjs/event-emitter";
 
 @WebSocketGateway({
-  namespace: '/rooms',
-  cors: { origin: '*', credentials: true },
+  namespace: "/rooms",
+  cors: { origin: "*", credentials: true },
 })
 export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer() server: Server;
@@ -51,7 +51,10 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     try {
       const token =
         (client.handshake.auth?.token as string) ||
-        (client.handshake.headers?.authorization as string)?.replace('Bearer ', '');
+        (client.handshake.headers?.authorization as string)?.replace(
+          "Bearer ",
+          "",
+        );
 
       if (!token) {
         client.disconnect();
@@ -59,7 +62,7 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       }
 
       const payload = this.jwtService.verify(token, {
-        secret: this.config.get<string>('auth.jwtSecret'),
+        secret: this.config.get<string>("auth.jwtSecret"),
       });
 
       client.data.userId = payload.sub;
@@ -78,8 +81,8 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     if (userId) {
       const rooms = Array.from(client.rooms);
       for (const room of rooms) {
-        if (room.startsWith('room:')) {
-          const roomId = room.replace('room:', '');
+        if (room.startsWith("room:")) {
+          const roomId = room.replace("room:", "");
           await this.handleLeaveRoom(client, { roomId });
         }
       }
@@ -87,7 +90,7 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.logger.log(`Client disconnected: ${client.id}`);
   }
 
-  @SubscribeMessage('room:join')
+  @SubscribeMessage("room:join")
   async handleJoinRoom(
     @ConnectedSocket() client: Socket,
     @MessageBody() data: { roomId: string; password?: string },
@@ -96,17 +99,21 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     if (!userId) return;
 
     try {
-const room = await this.roomsService.joinRoom(userId, data.roomId, data.password);
+      const room = await this.roomsService.joinRoom(
+        userId,
+        data.roomId,
+        data.password,
+      );
       client.join(`room:${room.id}`);
-      this.server.to(`room:${room.id}`).emit('room:updated', room);
-      client.emit('room:joined', room);
+      this.server.to(`room:${room.id}`).emit("room:updated", room);
+      client.emit("room:joined", room);
       this.broadcastRoomList();
     } catch (err) {
-      client.emit('room:error', { message: (err as Error).message });
+      client.emit("room:error", { message: (err as Error).message });
     }
   }
 
-  @SubscribeMessage('room:leave')
+  @SubscribeMessage("room:leave")
   async handleLeaveRoom(
     @ConnectedSocket() client: Socket,
     @MessageBody() data: { roomId: string },
@@ -118,21 +125,21 @@ const room = await this.roomsService.joinRoom(userId, data.roomId, data.password
       const result = await this.roomsService.leaveRoom(userId, data.roomId);
       client.leave(`room:${data.roomId}`);
 
-if (result.closed) {
-        this.server.to(`room:${data.roomId}`).emit('room:closed');
+      if (result.closed) {
+        this.server.to(`room:${data.roomId}`).emit("room:closed");
       } else {
         const updated = await this.roomsService.getRoomById(data.roomId);
-        this.server.to(`room:${data.roomId}`).emit('room:updated', updated);
+        this.server.to(`room:${data.roomId}`).emit("room:updated", updated);
       }
       this.broadcastRoomList();
 
-client.emit('room:left');
+      client.emit("room:left");
     } catch (err) {
-      client.emit('room:error', { message: (err as Error).message });
+      client.emit("room:error", { message: (err as Error).message });
     }
   }
 
-  @SubscribeMessage('room:ready')
+  @SubscribeMessage("room:ready")
   async handleSetReady(
     @ConnectedSocket() client: Socket,
     @MessageBody() data: { roomId: string; isReady: boolean },
@@ -140,17 +147,21 @@ client.emit('room:left');
     const userId = client.data.userId;
     if (!userId) return;
 
-    const result = await this.roomsService.setReady(userId, data.roomId, data.isReady);
+    const result = await this.roomsService.setReady(
+      userId,
+      data.roomId,
+      data.isReady,
+    );
     const room = await this.roomsService.getRoomById(data.roomId);
-    this.server.to(`room:${data.roomId}`).emit('room:updated', room);
+    this.server.to(`room:${data.roomId}`).emit("room:updated", room);
 
-if (result.allReady) {
-      this.server.to(`room:${data.roomId}`).emit('room:all-ready');
+    if (result.allReady) {
+      this.server.to(`room:${data.roomId}`).emit("room:all-ready");
     }
     this.broadcastRoomList();
   }
 
-  @SubscribeMessage('room:kick')
+  @SubscribeMessage("room:kick")
   async handleKickPlayer(
     @ConnectedSocket() client: Socket,
     @MessageBody() data: { roomId: string; targetUserId: string },
@@ -159,26 +170,30 @@ if (result.allReady) {
     if (!userId) return;
 
     try {
-      await this.roomsService.kickPlayer(userId, data.roomId, data.targetUserId);
+      await this.roomsService.kickPlayer(
+        userId,
+        data.roomId,
+        data.targetUserId,
+      );
       const targetSocket = this.socketState.getUserSocket(data.targetUserId);
 
       if (targetSocket) {
         const targetClient = this.server.sockets.sockets.get(targetSocket);
         if (targetClient) {
-          targetClient.emit('room:kicked');
+          targetClient.emit("room:kicked");
           targetClient.leave(`room:${data.roomId}`);
         }
       }
 
-const room = await this.roomsService.getRoomById(data.roomId);
-      this.server.to(`room:${data.roomId}`).emit('room:updated', room);
+      const room = await this.roomsService.getRoomById(data.roomId);
+      this.server.to(`room:${data.roomId}`).emit("room:updated", room);
       this.broadcastRoomList();
     } catch (err) {
-      client.emit('room:error', { message: (err as Error).message });
+      client.emit("room:error", { message: (err as Error).message });
     }
   }
 
-  @SubscribeMessage('room:close')
+  @SubscribeMessage("room:close")
   async handleCloseRoom(
     @ConnectedSocket() client: Socket,
     @MessageBody() data: { roomId: string },
@@ -188,19 +203,21 @@ const room = await this.roomsService.getRoomById(data.roomId);
 
     try {
       await this.roomsService.closeRoom(userId, data.roomId);
-      this.server.to(`room:${data.roomId}`).emit('room:closed');
+      this.server.to(`room:${data.roomId}`).emit("room:closed");
 
-const sockets = await this.server.in(`room:${data.roomId}`).fetchSockets();
+      const sockets = await this.server
+        .in(`room:${data.roomId}`)
+        .fetchSockets();
       for (const s of sockets) {
         s.leave(`room:${data.roomId}`);
       }
       this.broadcastRoomList();
     } catch (err) {
-      client.emit('room:error', { message: (err as Error).message });
+      client.emit("room:error", { message: (err as Error).message });
     }
   }
 
-@SubscribeMessage('room:select-game')
+  @SubscribeMessage("room:select-game")
   async handleSelectGame(
     @ConnectedSocket() client: Socket,
     @MessageBody() data: { roomId: string; gameType: string },
@@ -209,17 +226,26 @@ const sockets = await this.server.in(`room:${data.roomId}`).fetchSockets();
     if (!userId) return;
 
     try {
-const room = await this.roomsService.selectGame(userId, data.roomId, data.gameType);
-      this.server.to(`room:${data.roomId}`).emit('room:updated', room);
+      const room = await this.roomsService.selectGame(
+        userId,
+        data.roomId,
+        data.gameType,
+      );
+      this.server.to(`room:${data.roomId}`).emit("room:updated", room);
     } catch (err) {
-      client.emit('room:error', { message: (err as Error).message });
+      client.emit("room:error", { message: (err as Error).message });
     }
   }
 
-  @SubscribeMessage('room:update-settings')
+  @SubscribeMessage("room:update-settings")
   async handleUpdateSettings(
     @ConnectedSocket() client: Socket,
-    @MessageBody() data: { roomId: string; maxPlayers?: number; gameSettings?: Record<string, unknown> },
+    @MessageBody()
+    data: {
+      roomId: string;
+      maxPlayers?: number;
+      gameSettings?: Record<string, unknown>;
+    },
   ) {
     const userId = client.data.userId;
     if (!userId) return;
@@ -229,36 +255,38 @@ const room = await this.roomsService.selectGame(userId, data.roomId, data.gameTy
         maxPlayers: data.maxPlayers,
         gameSettings: data.gameSettings,
       });
-      this.server.to(`room:${data.roomId}`).emit('room:updated', room);
-this.server.to(`room:${data.roomId}`).emit('room:settings-updated', {
+      this.server.to(`room:${data.roomId}`).emit("room:updated", room);
+      this.server.to(`room:${data.roomId}`).emit("room:settings-updated", {
         maxPlayers: room.maxPlayers,
         settings: room.settings,
       });
     } catch (err) {
-      client.emit('room:error', { message: (err as Error).message });
+      client.emit("room:error", { message: (err as Error).message });
     }
   }
 
-  @SubscribeMessage('lobby:chat')
+  @SubscribeMessage("lobby:chat")
   handleChat(
     @ConnectedSocket() client: Socket,
     @MessageBody() data: { roomId: string; message: string },
   ) {
-const userId = client.data.userId;
+    const userId = client.data.userId;
     if (!userId) return;
 
     // 🔒 Rate limit: saniyede max 5 lobi mesajı
     if (this.isRateLimited(`lobby-chat:${userId}`, 5, 5000)) {
-      client.emit('room:error', { message: 'Çok hızlı mesaj gönderiyorsun, lütfen yavaşla' });
+      client.emit("room:error", {
+        message: "Çok hızlı mesaj gönderiyorsun, lütfen yavaşla",
+      });
       return;
     }
 
     const sanitized = data.message
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
       .substring(0, 300);
 
-this.server.to(`room:${data.roomId}`).emit('lobby:chat', {
+    this.server.to(`room:${data.roomId}`).emit("lobby:chat", {
       userId,
       username: client.data.username,
       message: sanitized,
@@ -266,30 +294,30 @@ this.server.to(`room:${data.roomId}`).emit('lobby:chat', {
     });
   }
 
-  @SubscribeMessage('lobby:typing')
+  @SubscribeMessage("lobby:typing")
   handleTyping(
     @ConnectedSocket() client: Socket,
     @MessageBody() data: { roomId: string; isTyping: boolean },
   ) {
     const userId = client.data.userId;
     if (!userId) return;
-    client.to(`room:${data.roomId}`).emit('lobby:typing', {
+    client.to(`room:${data.roomId}`).emit("lobby:typing", {
       userId,
       username: client.data.username,
       isTyping: data.isTyping,
     });
   }
 
-  @SubscribeMessage('lobby:emote')
+  @SubscribeMessage("lobby:emote")
   handleEmote(
     @ConnectedSocket() client: Socket,
     @MessageBody() data: { roomId: string; emote: string },
   ) {
     const userId = client.data.userId;
     if (!userId) return;
-    const allowed = ['😂', '😮', '😡', '❤️', '👏', '👍', '🎉', '🤔'];
+    const allowed = ["😂", "😮", "😡", "❤️", "👏", "👍", "🎉", "🤔"];
     if (!allowed.includes(data.emote)) return;
-    this.server.to(`room:${data.roomId}`).emit('lobby:emote', {
+    this.server.to(`room:${data.roomId}`).emit("lobby:emote", {
       userId,
       username: client.data.username,
       emote: data.emote,
@@ -297,7 +325,7 @@ this.server.to(`room:${data.roomId}`).emit('lobby:chat', {
     });
   }
 
-  @SubscribeMessage('room:transfer-host')
+  @SubscribeMessage("room:transfer-host")
   async handleTransferHost(
     @ConnectedSocket() client: Socket,
     @MessageBody() data: { roomId: string; targetUserId: string },
@@ -305,19 +333,23 @@ this.server.to(`room:${data.roomId}`).emit('lobby:chat', {
     const userId = client.data.userId;
     if (!userId) return;
     try {
-      const room = await this.roomsService.transferHost(userId, data.roomId, data.targetUserId);
-      this.server.to(`room:${data.roomId}`).emit('room:updated', room);
-      this.server.to(`room:${data.roomId}`).emit('room:host-changed', {
+      const room = await this.roomsService.transferHost(
+        userId,
+        data.roomId,
+        data.targetUserId,
+      );
+      this.server.to(`room:${data.roomId}`).emit("room:updated", room);
+      this.server.to(`room:${data.roomId}`).emit("room:host-changed", {
         newHostId: data.targetUserId,
         newHostName: room.host?.profile?.displayName || room.host?.username,
       });
       this.broadcastRoomList();
     } catch (err) {
-      client.emit('room:error', { message: (err as Error).message });
+      client.emit("room:error", { message: (err as Error).message });
     }
   }
 
-  @SubscribeMessage('room:invite')
+  @SubscribeMessage("room:invite")
   async handleInvite(
     @ConnectedSocket() client: Socket,
     @MessageBody() data: { roomId: string; targetUserId: string },
@@ -331,7 +363,7 @@ this.server.to(`room:${data.roomId}`).emit('lobby:chat', {
       if (targetClient) {
         try {
           const room = await this.roomsService.getRoomById(data.roomId);
-          targetClient.emit('room:invite-received', {
+          targetClient.emit("room:invite-received", {
             roomId: data.roomId,
             roomCode: room.code,
             roomName: room.name,
@@ -343,10 +375,10 @@ this.server.to(`room:${data.roomId}`).emit('lobby:chat', {
     }
   }
 
-async broadcastRoomList(): Promise<void> {
+  async broadcastRoomList(): Promise<void> {
     try {
       const rooms = await this.roomsService.getPublicRooms();
-      this.server.emit('rooms:list-updated', rooms);
+      this.server.emit("rooms:list-updated", rooms);
     } catch {}
   }
 

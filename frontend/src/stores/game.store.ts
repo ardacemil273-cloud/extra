@@ -1,5 +1,11 @@
-import { create } from 'zustand';
-import { GameState, GamePlayer, GamePhase, ChatMessage, VampireRole } from '@/types';
+import { create } from "zustand";
+import {
+  GameState,
+  GamePlayer,
+  GamePhase,
+  ChatMessage,
+  VampireRole,
+} from "@/types";
 
 interface NarratorMessage {
   id: string;
@@ -21,7 +27,12 @@ interface GameStore {
   nightActiveRole: string | null;
   morningDeaths: Array<{ userId: string; displayName: string; avatar: string }>;
   voteResults: Array<{ userId: string; votes: number }>;
-  eliminatedPlayer: { userId: string; displayName: string; role: string; avatar: string } | null;
+  eliminatedPlayer: {
+    userId: string;
+    displayName: string;
+    role: string;
+    avatar: string;
+  } | null;
   gameResult: {
     winnerTeam: string;
     narrator: string;
@@ -32,14 +43,28 @@ interface GameStore {
   setGameState: (state: GameState) => void;
   updateGameState: (partial: Partial<GameState>) => void;
   setMyRole: (role: VampireRole, team: string) => void;
-  setMyTurn: (active: boolean, targets?: Array<{ userId: string; displayName: string; avatar: string }>, role?: VampireRole, duration?: number) => void;
+  setMyTurn: (
+    active: boolean,
+    targets?: Array<{ userId: string; displayName: string; avatar: string }>,
+    role?: VampireRole,
+    duration?: number,
+  ) => void;
   addChatMessage: (msg: ChatMessage) => void;
   addNarratorMessage: (msg: NarratorMessage) => void;
   setNightActiveRole: (role: string | null) => void;
-  setMorningDeaths: (deaths: Array<{ userId: string; displayName: string; avatar: string }>) => void;
+  setMorningDeaths: (
+    deaths: Array<{ userId: string; displayName: string; avatar: string }>,
+  ) => void;
   setVoteResults: (results: Array<{ userId: string; votes: number }>) => void;
-  setEliminatedPlayer: (player: { userId: string; displayName: string; role: string; avatar: string } | null) => void;
-  setGameResult: (result: GameStore['gameResult']) => void;
+  setEliminatedPlayer: (
+    player: {
+      userId: string;
+      displayName: string;
+      role: string;
+      avatar: string;
+    } | null,
+  ) => void;
+  setGameResult: (result: GameStore["gameResult"]) => void;
   setConnected: (v: boolean) => void;
   reset: () => void;
 }
@@ -66,10 +91,18 @@ export const useGameStore = create<GameStore>((set) => ({
   ...initialState,
 
   setGameState: (state) => set({ gameState: state }),
-  updateGameState: (partial) => set((s) => ({ gameState: s.gameState ? { ...s.gameState, ...partial } : null })),
+  updateGameState: (partial) =>
+    set((s) => ({
+      gameState: s.gameState ? { ...s.gameState, ...partial } : null,
+    })),
   setMyRole: (role, team) => set({ myRole: role, myTeam: team }),
-  setMyTurn: (active, targets = [], role = null, duration = 30) =>
-    set({ isMyTurn: active, turnTargets: targets, turnRole: role, turnDuration: duration }),
+  setMyTurn: (active, targets = [], role = undefined, duration = 30) =>
+    set({
+      isMyTurn: active,
+      turnTargets: targets,
+      turnRole: role,
+      turnDuration: duration,
+    }),
   addChatMessage: (msg) =>
     set((s) => ({ messages: [...s.messages.slice(-99), msg] })),
   addNarratorMessage: (msg) =>

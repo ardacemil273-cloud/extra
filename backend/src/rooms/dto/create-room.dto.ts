@@ -1,4 +1,13 @@
-import { IsString, MinLength, MaxLength, IsBoolean, IsOptional, IsInt, Min, Max } from 'class-validator';
+import {
+  IsString,
+  MinLength,
+  MaxLength,
+  IsBoolean,
+  IsOptional,
+  IsInt,
+  Min,
+  Max,
+} from "class-validator";
 
 export class CreateRoomDto {
   @IsString()

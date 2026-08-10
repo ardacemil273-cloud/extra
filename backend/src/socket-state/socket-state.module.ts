@@ -1,5 +1,5 @@
-import { Module, Global } from '@nestjs/common';
-import { SocketStateService } from './socket-state.service';
+import { Module, Global } from "@nestjs/common";
+import { SocketStateService } from "./socket-state.service";
 
 @Global()
 @Module({

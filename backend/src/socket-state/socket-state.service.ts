@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable } from "@nestjs/common";
 
 @Injectable()
 export class SocketStateService {
@@ -24,12 +24,12 @@ export class SocketStateService {
     }
     return userId;
   }
-  
+
   removeUserSocket(userId: string) {
     const socketId = this.userToSocket.get(userId);
-    if(socketId) {
-        this.userToSocket.delete(userId);
-        this.socketToUser.delete(socketId);
+    if (socketId) {
+      this.userToSocket.delete(userId);
+      this.socketToUser.delete(socketId);
     }
   }
 

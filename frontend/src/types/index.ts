@@ -3,7 +3,7 @@ export interface User {
   username: string;
   email?: string;
   isGuest: boolean;
-  provider: 'LOCAL' | 'GOOGLE' | 'DISCORD' | 'GUEST';
+  provider: "LOCAL" | "GOOGLE" | "DISCORD" | "GUEST";
   isOnline: boolean;
   lastSeen: string;
   profile?: Profile;
@@ -36,7 +36,7 @@ export interface Achievement {
   description: string;
   icon: string;
   xpReward: number;
-  rarity: 'common' | 'rare' | 'epic' | 'legendary';
+  rarity: "common" | "rare" | "epic" | "legendary";
   unlocked: boolean;
   unlockedAt?: string;
 }
@@ -66,7 +66,12 @@ export interface FriendRequest {
 
 export interface Notification {
   id: string;
-  type: 'FRIEND_REQUEST' | 'FRIEND_ACCEPTED' | 'ROOM_INVITE' | 'ACHIEVEMENT' | 'SYSTEM';
+  type:
+    | "FRIEND_REQUEST"
+    | "FRIEND_ACCEPTED"
+    | "ROOM_INVITE"
+    | "ACHIEVEMENT"
+    | "SYSTEM";
   title: string;
   message: string;
   data?: Record<string, unknown>;
@@ -100,7 +105,7 @@ export interface Room {
   hostId: string;
   maxPlayers: number;
   isPrivate: boolean;
-  status: 'WAITING' | 'IN_GAME' | 'FINISHED';
+  status: "WAITING" | "IN_GAME" | "FINISHED";
   gameType?: string;
   settings: Record<string, unknown>;
   createdAt: string;
@@ -113,17 +118,18 @@ export interface Room {
 }
 
 export type GamePhase =
-  | 'LOBBY'
-  | 'NIGHT'
-  | 'DAY_ANNOUNCEMENT'
-  | 'DAY_DISCUSSION'
-  | 'DAY_VOTING'
-  | 'VOTE_RESULT'
-  | 'GAME_OVER';
+  | "LOBBY"
+  | "NIGHT"
+  | "DAY_ANNOUNCEMENT"
+  | "DAY_DISCUSSION"
+  | "DAY_VOTING"
+  | "VOTE_RESULT"
+  | "GAME_OVER";
 
-export type PlayerStatus = 'ALIVE' | 'DEAD' | 'SPECTATOR';
+export type PlayerStatus = "ALIVE" | "DEAD" | "SPECTATOR";
 
-export type VampireRole = 'VAMPIRE' | 'DOCTOR' | 'DETECTIVE' | 'HUNTER' | 'VILLAGER';
+export type VampireRole =
+  "VAMPIRE" | "DOCTOR" | "DETECTIVE" | "HUNTER" | "VILLAGER";
 
 export interface GamePlayer {
   userId: string;
@@ -191,87 +197,92 @@ export interface ApiResponse<T> {
 
 export const GAME_TYPES = [
   {
-    id: 'vampire-village',
-    name: 'Vampir Köylü',
-    description: 'Arandaki vampiri bul! Roller: Vampir, Doktor, Dedektif, Avcı, Köylü',
-    icon: '🧛',
+    id: "vampire-village",
+    name: "Vampir Köylü",
+    description:
+      "Arandaki vampiri bul! Roller: Vampir, Doktor, Dedektif, Avcı, Köylü",
+    icon: "🧛",
     minPlayers: 4,
     maxPlayers: 16,
-    tags: ['Rol Oyunu', 'Strateji', 'Sosyal'],
+    tags: ["Rol Oyunu", "Strateji", "Sosyal"],
     available: true,
   },
   {
-    id: 'mafia',
-    name: 'Mafya',
-    description: 'Klasik mafya oyunu. Yakında geliyor!',
-    icon: '🔫',
+    id: "mafia",
+    name: "Mafya",
+    description: "Klasik mafya oyunu. Yakında geliyor!",
+    icon: "🔫",
     minPlayers: 6,
     maxPlayers: 20,
-    tags: ['Rol Oyunu', 'Strateji'],
+    tags: ["Rol Oyunu", "Strateji"],
     available: false,
   },
   {
-    id: 'bomb-party',
-    name: 'Bomb Party',
-    description: 'Kelime oyunu. Yakında geliyor!',
-    icon: '💣',
+    id: "bomb-party",
+    name: "Bomb Party",
+    description: "Kelime oyunu. Yakında geliyor!",
+    icon: "💣",
     minPlayers: 2,
     maxPlayers: 10,
-    tags: ['Kelime', 'Hızlı'],
+    tags: ["Kelime", "Hızlı"],
     available: false,
   },
   {
-    id: 'draw-guess',
-    name: 'Çizim Oyunu',
-    description: 'Çiz ve tahmin et. Yakında geliyor!',
-    icon: '🎨',
+    id: "draw-guess",
+    name: "Çizim Oyunu",
+    description: "Çiz ve tahmin et. Yakında geliyor!",
+    icon: "🎨",
     minPlayers: 2,
     maxPlayers: 12,
-    tags: ['Yaratıcı', 'Eğlenceli'],
+    tags: ["Yaratıcı", "Eğlenceli"],
     available: false,
   },
 ] as const;
 
-export const ROLE_CONFIG: Record<VampireRole, {
-  name: string;
-  icon: string;
-  description: string;
-  color: string;
-  bgClass: string;
-}> = {
+export const ROLE_CONFIG: Record<
+  VampireRole,
+  {
+    name: string;
+    icon: string;
+    description: string;
+    color: string;
+    bgClass: string;
+  }
+> = {
   VAMPIRE: {
-    name: 'Vampir',
-    icon: '🧛',
-    description: 'Her gece bir köylüyü seç ve ortadan kaldır. Amacın köyü ele geçirmek.',
-    color: '#ef4444',
-    bgClass: 'role-vampire',
+    name: "Vampir",
+    icon: "🧛",
+    description:
+      "Her gece bir köylüyü seç ve ortadan kaldır. Amacın köyü ele geçirmek.",
+    color: "#ef4444",
+    bgClass: "role-vampire",
   },
   DOCTOR: {
-    name: 'Doktor',
-    icon: '💉',
-    description: 'Her gece bir oyuncuyu vampirin saldırısından koru.',
-    color: '#22c55e',
-    bgClass: 'role-doctor',
+    name: "Doktor",
+    icon: "💉",
+    description: "Her gece bir oyuncuyu vampirin saldırısından koru.",
+    color: "#22c55e",
+    bgClass: "role-doctor",
   },
   DETECTIVE: {
-    name: 'Dedektif',
-    icon: '🔍',
-    description: 'Her gece bir oyuncuyu sorgula. Vampir mi, masum mu?',
-    color: '#3b82f6',
-    bgClass: 'role-detective',
+    name: "Dedektif",
+    icon: "🔍",
+    description: "Her gece bir oyuncuyu sorgula. Vampir mi, masum mu?",
+    color: "#3b82f6",
+    bgClass: "role-detective",
   },
   HUNTER: {
-    name: 'Avcı',
-    icon: '🏹',
-    description: 'Şüphelileri gözlemle. Gündüz oylamasında etkili ol.',
-    color: '#f59e0b',
-    bgClass: 'role-hunter',
+    name: "Avcı",
+    icon: "🏹",
+    description: "Şüphelileri gözlemle. Gündüz oylamasında etkili ol.",
+    color: "#f59e0b",
+    bgClass: "role-hunter",
   },
   VILLAGER: {
-    name: 'Köylü',
-    icon: '🧑',
-    description: 'Vampiri bul ve gündüz oylamasıyla etkisiz hale getir.',
-    color: '#9ca3af',
-    bgClass: 'role-villager',
+    name: "Köylü",
+    icon: "🧑",
+    description: "Vampiri bul ve gündüz oylamasıyla etkisiz hale getir.",
+    color: "#9ca3af",
+    bgClass: "role-villager",
   },
 };

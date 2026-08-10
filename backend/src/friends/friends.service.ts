@@ -4,10 +4,10 @@ import {
   ConflictException,
   BadRequestException,
   ForbiddenException,
-} from '@nestjs/common';
-import { PrismaService } from '../database/prisma.service';
-import { NotificationsService } from '../notifications/notifications.service';
-import { FriendStatus, NotificationType } from '@prisma/client';
+} from "@nestjs/common";
+import { PrismaService } from "../database/prisma.service";
+import { NotificationsService } from "../notifications/notifications.service";
+import { FriendStatus, NotificationType } from "@prisma/client";
 
 const FRIEND_USER_SELECT = {
   id: true,
@@ -26,12 +26,17 @@ export class FriendsService {
 
   async sendFriendRequest(requesterId: string, addresseeId: string) {
     if (requesterId === addresseeId) {
-      throw new BadRequestException('Kendinize arkadaşlık isteği gönderemezsiniz');
+      throw new BadRequestException(
+        "Kendinize arkadaşlık isteği gönderemezsiniz",
+      );
     }
 
-    const addressee = await this.prisma.user.findUnique({ where: { id: addresseeId } });
-    if (!addressee) throw new NotFoundException('Kullanıcı bulunamadı');
-    if (addressee.isGuest) throw new BadRequestException('Misafir kullanıcılara istek gönderilemez');
+    const addressee = await this.prisma.user.findUnique({
+      where: { id: addresseeId },
+    });
+    if (!addressee) throw new NotFoundException("Kullanıcı bulunamadı");
+    if (addressee.isGuest)
+      throw new BadRequestException("Misafir kullanıcılara istek gönderilemez");
 
     const existing = await this.prisma.friend.findFirst({
       where: {
@@ -44,11 +49,11 @@ export class FriendsService {
 
     if (existing) {
       if (existing.status === FriendStatus.ACCEPTED)
-        throw new ConflictException('Zaten arkadaşsınız');
+        throw new ConflictException("Zaten arkadaşsınız");
       if (existing.status === FriendStatus.PENDING)
-        throw new ConflictException('Zaten bekleyen bir istek var');
+        throw new ConflictException("Zaten bekleyen bir istek var");
       if (existing.status === FriendStatus.BLOCKED)
-        throw new ForbiddenException('Bu kullanıcıyla arkadaşlık kurulamaz');
+        throw new ForbiddenException("Bu kullanıcıyla arkadaşlık kurulamaz");
     }
 
     const request = await this.prisma.friend.create({
@@ -64,7 +69,7 @@ export class FriendsService {
       recipientId: addresseeId,
       senderId: requesterId,
       type: NotificationType.FRIEND_REQUEST,
-      title: 'Arkadaşlık İsteği',
+      title: "Arkadaşlık İsteği",
       message: `${requester.profile?.displayName || requester.username} size arkadaşlık isteği gönderdi`,
       data: { friendRequestId: request.id, requesterId },
     });
@@ -73,14 +78,16 @@ export class FriendsService {
   }
 
   async acceptFriendRequest(userId: string, requestId: string) {
-    const request = await this.prisma.friend.findUnique({ where: { id: requestId } });
+    const request = await this.prisma.friend.findUnique({
+      where: { id: requestId },
+    });
 
     if (!request || request.addresseeId !== userId) {
-      throw new NotFoundException('Arkadaşlık isteği bulunamadı');
+      throw new NotFoundException("Arkadaşlık isteği bulunamadı");
     }
 
     if (request.status !== FriendStatus.PENDING) {
-      throw new BadRequestException('Bu istek artık geçerli değil');
+      throw new BadRequestException("Bu istek artık geçerli değil");
     }
 
     const updated = await this.prisma.friend.update({
@@ -97,7 +104,7 @@ export class FriendsService {
       recipientId: request.requesterId,
       senderId: userId,
       type: NotificationType.FRIEND_ACCEPTED,
-      title: 'Arkadaşlık Kabul Edildi',
+      title: "Arkadaşlık Kabul Edildi",
       message: `${accepter.profile?.displayName || accepter.username} arkadaşlık isteğinizi kabul etti`,
       data: { userId },
     });
@@ -106,14 +113,16 @@ export class FriendsService {
   }
 
   async declineFriendRequest(userId: string, requestId: string) {
-    const request = await this.prisma.friend.findUnique({ where: { id: requestId } });
+    const request = await this.prisma.friend.findUnique({
+      where: { id: requestId },
+    });
 
     if (!request || request.addresseeId !== userId) {
-      throw new NotFoundException('Arkadaşlık isteği bulunamadı');
+      throw new NotFoundException("Arkadaşlık isteği bulunamadı");
     }
 
     await this.prisma.friend.delete({ where: { id: requestId } });
-    return { message: 'Arkadaşlık isteği reddedildi' };
+    return { message: "Arkadaşlık isteği reddedildi" };
   }
 
   async removeFriend(userId: string, friendId: string) {
@@ -127,10 +136,10 @@ export class FriendsService {
       },
     });
 
-    if (!friendship) throw new NotFoundException('Arkadaşlık bulunamadı');
+    if (!friendship) throw new NotFoundException("Arkadaşlık bulunamadı");
 
     await this.prisma.friend.delete({ where: { id: friendship.id } });
-    return { message: 'Arkadaşlıktan çıkarıldı' };
+    return { message: "Arkadaşlıktan çıkarıldı" };
   }
 
   async getFriends(userId: string) {
@@ -158,7 +167,7 @@ export class FriendsService {
       include: {
         requester: { select: FRIEND_USER_SELECT },
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
     });
   }
 
@@ -168,7 +177,7 @@ export class FriendsService {
       include: {
         addressee: { select: FRIEND_USER_SELECT },
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
     });
   }
 
@@ -182,7 +191,7 @@ export class FriendsService {
       },
     });
 
-    if (!friendship) return { status: 'NONE' };
+    if (!friendship) return { status: "NONE" };
     return {
       status: friendship.status,
       requestId: friendship.id,

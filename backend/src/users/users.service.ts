@@ -1,5 +1,5 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../database/prisma.service';
+import { Injectable, NotFoundException } from "@nestjs/common";
+import { PrismaService } from "../database/prisma.service";
 
 const USER_SELECT = {
   id: true,
@@ -10,7 +10,9 @@ const USER_SELECT = {
   provider: true,
   profile: true,
   statistics: true,
-  _count: { select: { sentFriendRequests: true, receivedFriendRequests: true } },
+  _count: {
+    select: { sentFriendRequests: true, receivedFriendRequests: true },
+  },
 };
 
 @Injectable()
@@ -22,7 +24,7 @@ export class UsersService {
       where: { id },
       select: USER_SELECT,
     });
-    if (!user) throw new NotFoundException('Kullanıcı bulunamadı');
+    if (!user) throw new NotFoundException("Kullanıcı bulunamadı");
     return user;
   }
 
@@ -31,33 +33,49 @@ export class UsersService {
       where: { username },
       select: USER_SELECT,
     });
-    if (!user) throw new NotFoundException('Kullanıcı bulunamadı');
+    if (!user) throw new NotFoundException("Kullanıcı bulunamadı");
     return user;
   }
 
   async searchUsers(query: string, currentUserId: string) {
     return this.prisma.user.findMany({
-      where: { username: { contains: query, mode: 'insensitive' }, id: { not: currentUserId }, isGuest: false },
-      select: { id: true, username: true, isOnline: true, profile: { select: { displayName: true, avatar: true, level: true } } },
+      where: {
+        username: { contains: query, mode: "insensitive" },
+        id: { not: currentUserId },
+        isGuest: false,
+      },
+      select: {
+        id: true,
+        username: true,
+        isOnline: true,
+        profile: { select: { displayName: true, avatar: true, level: true } },
+      },
       take: 20,
     });
   }
 
-  async getLeaderboard(sort: 'wins' | 'level' = 'wins', limit = 10) {
+  async getLeaderboard(sort: "wins" | "level" = "wins", limit = 10) {
     const users = await this.prisma.user.findMany({
       where: { isGuest: false },
       select: {
-        id: true, username: true,
-        profile: { select: { displayName: true, avatar: true, level: true, xp: true } },
-        statistics: { select: { gamesWon: true, gamesPlayed: true, winRate: true } },
+        id: true,
+        username: true,
+        profile: {
+          select: { displayName: true, avatar: true, level: true, xp: true },
+        },
+        statistics: {
+          select: { gamesWon: true, gamesPlayed: true, winRate: true },
+        },
       },
       take: limit * 3, // filter sonrası yeterli olsun
     });
     const sorted = users
-      .filter(u => u.statistics)
-      .sort((a, b) => sort === 'wins'
-        ? (b.statistics?.gamesWon || 0) - (a.statistics?.gamesWon || 0)
-        : (b.profile?.level || 0) - (a.profile?.level || 0))
+      .filter((u) => u.statistics)
+      .sort((a, b) =>
+        sort === "wins"
+          ? (b.statistics?.gamesWon || 0) - (a.statistics?.gamesWon || 0)
+          : (b.profile?.level || 0) - (a.profile?.level || 0),
+      )
       .slice(0, limit);
     return sorted;
   }
@@ -69,9 +87,12 @@ export class UsersService {
     });
   }
 
-  async addXp(userId: string, xp: number): Promise<{ newLevel: number; leveledUp: boolean }> {
+  async addXp(
+    userId: string,
+    xp: number,
+  ): Promise<{ newLevel: number; leveledUp: boolean }> {
     const profile = await this.prisma.profile.findUnique({ where: { userId } });
-    if (!profile) throw new NotFoundException('Profil bulunamadı');
+    if (!profile) throw new NotFoundException("Profil bulunamadı");
 
     const newXp = profile.xp + xp;
     const newLevel = this.calculateLevel(newXp);
@@ -93,7 +114,9 @@ export class UsersService {
     userId: string,
     data: { won: boolean; playTime: number },
   ): Promise<void> {
-    const stats = await this.prisma.statistics.findUnique({ where: { userId } });
+    const stats = await this.prisma.statistics.findUnique({
+      where: { userId },
+    });
     if (!stats) return;
 
     const gamesPlayed = stats.gamesPlayed + 1;

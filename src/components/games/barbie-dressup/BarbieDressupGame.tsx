@@ -64,13 +64,13 @@ const CATEGORIES: Array<{ key: BarbieCategory; label: string; emoji: string }> =
 ];
 
 const RULES = [
-  '💖 Rüya Dolabına hoş geldin! Barbie\'yi en güzel giydir!',
+  '💖 Rüya Dolabına hoş geldin! Barbie&apos;yi en güzel giydir!',
   '👗 5 tur var: Malibu, Pijama, Prenses, Paris, Randevu!',
-  '⏱ Her tur giyinmek için 60 saniyen var.',
+  '⏱ Her tur giyinmek için 60 saniyen&apos; var.',
   '💄 Elbise, saç ve makyaj seçebilirsin.',
   '💃 Barbie kutusundan çıkıp podyumda yürüyecek!',
-  '⭐ Herkesin Barbie\'sini 1-5 yıldızla oyla. Kendine oy veremezsin!',
-  '👑 En çok puan alan "Barbie of the Year" olur!',
+  '⭐ Herkesin Barbie&apos;sini 1-5 yıldızla oyla. Kendine oy veremezsin!',
+  '👑 En çok puan alan &quot;Barbie of the Year&quot; olur!',
 ];
 
 interface Props {
@@ -269,7 +269,7 @@ export default function BarbieDressupGame({ roomId, myUserId, players }: Props) 
         )}
         {runwayLook && isMe && (
           <div className="pastel-card rounded-2xl p-4 text-center text-sm text-[#a08fb0] relative z-10">
-            Bu senin Barbie\'n — herkes oyluyor! 💖
+            Bu senin Barbie&apos;n — herkes oyluyor! 💖
           </div>
         )}
       </div>
@@ -372,7 +372,7 @@ export default function BarbieDressupGame({ roomId, myUserId, players }: Props) 
               <motion.span key={s.id} initial={{ opacity: 1, scale: 0 }} animate={{ opacity: 0, scale: 1.5 }}
                 className="absolute text-2xl z-20 pointer-events-none" style={{ left: `${s.x}%`, top: `${s.y}%` }}>✨</motion.span>
             ))}
-            <p className="text-xs font-bold uppercase tracking-widest text-[#ff69b4] mb-2">Barbie\'n</p>
+            <p className="text-xs font-bold uppercase tracking-widest text-[#ff69b4] mb-2">Barbie&apos;n</p>
             <div className="w-44 h-64 rounded-2xl bg-gradient-to-b from-[#ffd6e8] to-[#ffc0cb] flex flex-col items-center justify-center relative border-2 border-[#ff69b4]/40 mb-3">
               <div className="absolute top-2 text-3xl">{myItems.map(id => itemById(id)).filter(i => i?.category === 'hair').map(i => i!.emoji)}</div>
               <div className="text-6xl mt-4" style={{ color: '#ffb07a' }}>😊</div>

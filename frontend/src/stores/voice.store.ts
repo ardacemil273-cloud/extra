@@ -1,5 +1,5 @@
-import { create } from 'zustand';
-import { VoiceState } from '@/types';
+import { create } from "zustand";
+import { VoiceState } from "@/types";
 
 interface VoiceStore {
   isMuted: boolean;
@@ -49,7 +49,13 @@ export const useVoiceStore = create<VoiceStore>((set, get) => ({
   setVolume: (v) => set({ volume: v }),
   updatePeer: (userId, state) => {
     const peers = new Map(get().peers);
-    const existing = peers.get(userId) || { userId, isMuted: false, isDeafened: false, isSpeaking: false, pushToTalk: false };
+    const existing = peers.get(userId) || {
+      userId,
+      isMuted: false,
+      isDeafened: false,
+      isSpeaking: false,
+      pushToTalk: false,
+    };
     peers.set(userId, { ...existing, ...state });
     set({ peers });
   },
@@ -76,8 +82,14 @@ export const useVoiceStore = create<VoiceStore>((set, get) => ({
     localStream?.getTracks().forEach((t) => t.stop());
     peerConnections.forEach((pc) => pc.close());
     set({
-      isMuted: false, isDeafened: false, isSpeaking: false, isPushToTalk: false,
-      isConnected: false, peers: new Map(), localStream: null, peerConnections: new Map(),
+      isMuted: false,
+      isDeafened: false,
+      isSpeaking: false,
+      isPushToTalk: false,
+      isConnected: false,
+      peers: new Map(),
+      localStream: null,
+      peerConnections: new Map(),
     });
   },
 }));

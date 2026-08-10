@@ -46,57 +46,56 @@ export default function LobbyPage() {
 
   useEffect(() => {
     if (!isAuthenticated) { router.push('/login'); return; }
+
+    const loadRoom = async () => {
+      try {
+        const { data } = await api.get(`/rooms/${roomId}`);
+        const room = data.data || data;
+        setRoom(room);
+        setMaxPlayersInput(room.maxPlayers);
+        const me = room.players?.find((p: any) => p.userId === userRef.current?.id);
+        if (me) setIsReady(me.isReady);
+        if (room.settings && Object.keys(room.settings).length > 0) {
+          setGameSettings({ ...DEFAULT_SETTINGS, ...room.settings });
+        }
+      } catch {
+        toast.error('Oda bulunamadı');
+        router.push('/dashboard');
+      }
+    };
+
+    const setupSocket = () => {
+      connectRoomSocket();
+      const socket = socketRef.current;
+      socket.emit('room:join', { roomId });
+      socket.on('connect', () => setConnected(true));
+      socket.on('disconnect', () => setConnected(false));
+      socket.on('room:updated', (room: Room) => {
+        setRoom(room);
+        const me = room.players?.find((p) => p.userId === userRef.current?.id);
+        if (me) setIsReady(me.isReady);
+        if ((room as any).settings && Object.keys((room as any).settings).length > 0) {
+          setGameSettings({ ...DEFAULT_SETTINGS, ...(room as any).settings });
+        }
+        setMaxPlayersInput(room.maxPlayers);
+      });
+      socket.on('room:settings-updated', ({ maxPlayers, settings }: any) => {
+        if (maxPlayers) setMaxPlayersInput(maxPlayers);
+        if (settings) setGameSettings({ ...DEFAULT_SETTINGS, ...settings });
+      });
+      socket.on('room:joined', (room: Room) => { setRoom(room); toast(`👋 ${room.players.slice(-1)[0]?.user?.profile?.displayName || 'Biri'} katıldı!`); });
+      socket.on('room:kicked', () => { toast.error('Odadan atıldınız'); router.push('/dashboard'); });
+      socket.on('room:closed', () => { toast('Oda kapatıldı'); router.push('/dashboard'); });
+      socket.on('lobby:chat', (msg: ChatMessage) => addChatMessage(msg));
+      socket.on('game:started', () => router.push(`/game/${roomId}`));
+      socket.on('room:error', ({ message }: { message: string }) => toast.error(message));
+    };
+
     loadRoom();
     setupSocket();
-    return () => { socketRef.current.off(); };
-  }, [roomId]);
-
-  useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [chatMessages]);
-
-  const loadRoom = async () => {
-    try {
-      const { data } = await api.get(`/rooms/${roomId}`);
-      const room = data.data || data;
-      setRoom(room);
-      setMaxPlayersInput(room.maxPlayers);
-      const me = room.players?.find((p: any) => p.userId === userRef.current?.id);
-      if (me) setIsReady(me.isReady);
-      if (room.settings && Object.keys(room.settings).length > 0) {
-        setGameSettings({ ...DEFAULT_SETTINGS, ...room.settings });
-      }
-    } catch {
-      toast.error('Oda bulunamadı');
-      router.push('/dashboard');
-    }
-  };
-
-  const setupSocket = () => {
-    connectRoomSocket();
-    const socket = socketRef.current;
-    socket.emit('room:join', { roomId });
-    socket.on('connect', () => setConnected(true));
-    socket.on('disconnect', () => setConnected(false));
-    // Biri girince/çıkınca/hazır olunca ANLIK güncelleme
-    socket.on('room:updated', (room: Room) => {
-      setRoom(room);
-      const me = room.players?.find((p) => p.userId === userRef.current?.id);
-      if (me) setIsReady(me.isReady);
-      if ((room as any).settings && Object.keys((room as any).settings).length > 0) {
-        setGameSettings({ ...DEFAULT_SETTINGS, ...(room as any).settings });
-      }
-      setMaxPlayersInput(room.maxPlayers);
-    });
-    socket.on('room:settings-updated', ({ maxPlayers, settings }: any) => {
-      if (maxPlayers) setMaxPlayersInput(maxPlayers);
-      if (settings) setGameSettings({ ...DEFAULT_SETTINGS, ...settings });
-    });
-    socket.on('room:joined', (room: Room) => { setRoom(room); toast(`👋 ${room.players.slice(-1)[0]?.user?.profile?.displayName || 'Biri'} katıldı!`); });
-    socket.on('room:kicked', () => { toast.error('Odadan atıldınız'); router.push('/dashboard'); });
-    socket.on('room:closed', () => { toast('Oda kapatıldı'); router.push('/dashboard'); });
-    socket.on('lobby:chat', (msg: ChatMessage) => addChatMessage(msg));
-    socket.on('game:started', () => router.push(`/game/${roomId}`));
-    socket.on('room:error', ({ message }: { message: string }) => toast.error(message));
-  };
+    const currentSocket = socketRef.current; // Capture current ref value
+    return () => { currentSocket.off(); };
+  }, [roomId, isAuthenticated, router, setRoom, setConnected, addChatMessage, setMaxPlayersInput, setGameSettings, userRef]);
 
   const handleLeave = useCallback(() => {
     socketRef.current.emit('room:leave', { roomId });

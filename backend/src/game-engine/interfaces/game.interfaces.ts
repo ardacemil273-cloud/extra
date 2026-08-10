@@ -1,20 +1,20 @@
 export type GamePhase =
-  | 'LOBBY'
-  | 'NIGHT'
-  | 'DAY_ANNOUNCEMENT'
-  | 'DAY_DISCUSSION'
-  | 'DAY_VOTING'
-  | 'VOTE_RESULT'
-  | 'GAME_OVER'
-  | 'COUNTDOWN'
-  | 'PLAYING'
-  | 'DRESSING'
-  | 'RUNWAY'
-| 'ROUND_RESULT'
-  | 'SERVING'
-  | 'BOX_REVEAL';
+  | "LOBBY"
+  | "NIGHT"
+  | "DAY_ANNOUNCEMENT"
+  | "DAY_DISCUSSION"
+  | "DAY_VOTING"
+  | "VOTE_RESULT"
+  | "GAME_OVER"
+  | "COUNTDOWN"
+  | "PLAYING"
+  | "DRESSING"
+  | "RUNWAY"
+  | "ROUND_RESULT"
+  | "SERVING"
+  | "BOX_REVEAL";
 
-export type PlayerStatus = 'ALIVE' | 'DEAD' | 'SPECTATOR';
+export type PlayerStatus = "ALIVE" | "DEAD" | "SPECTATOR";
 
 export interface GamePlayer {
   userId: string;

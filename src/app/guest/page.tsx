@@ -20,7 +20,7 @@ export default function GuestPage() {
       }
     };
     go();
-  }, []);
+  }, [loginAsGuest, router]);
 
   return (
     <div className="min-h-screen bg-[#080b14] flex items-center justify-center">

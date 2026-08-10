@@ -30,13 +30,28 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (!isAuthenticated) { router.push('/login'); return; }
+
+    const loadPublicRooms = async () => {
+      try {
+        const { data } = await api.get('/rooms/public');
+        setPublicRooms((data.data || data).slice(0, 8));
+      } catch {}
+    };
+
+    const loadFriends = async () => {
+      try {
+        const { data } = await api.get('/friends');
+        setFriends((data.data || data).slice(0, 6));
+      } catch {}
+    };
+
     fetchNotifications();
     loadPublicRooms();
     loadFriends();
-    // Her 8 saniyede otomatik yenile
+
     intervalRef.current = setInterval(loadPublicRooms, 8000);
-    // Socket ile anlık güncelleme
-import('@/lib/socket').then(({ connectRoomSocket, getRoomSocket }) => {
+
+    import('@/lib/socket').then(({ connectRoomSocket, getRoomSocket }) => {
       connectRoomSocket();
       const s = getRoomSocket();
       s.off('room:updated');
@@ -48,22 +63,13 @@ import('@/lib/socket').then(({ connectRoomSocket, getRoomSocket }) => {
       s.on('room:joined', loadPublicRooms);
       s.on('rooms:list-updated', loadPublicRooms);
     });
-    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
-  }, [isAuthenticated]);
 
-  const loadPublicRooms = async () => {
-    try {
-      const { data } = await api.get('/rooms/public');
-      setPublicRooms((data.data || data).slice(0, 8));
-    } catch {}
-  };
-
-  const loadFriends = async () => {
-    try {
-      const { data } = await api.get('/friends');
-      setFriends((data.data || data).slice(0, 6));
-    } catch {}
-  };
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      // Disconnect socket if necessary, but keep it connected if other parts of the app use it
+      // if (getRoomSocket().connected) getRoomSocket().disconnect(); // Uncomment if socket should disconnect on unmount
+    };
+  }, [isAuthenticated, router, fetchNotifications]);
 
   const handleJoin = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -39,7 +39,7 @@ const CATEGORIES: Array<{ key: ItemCategory; label: string }> = [
 
 const RULES = [
   '👗 Her turda bir tema verilir. Temaya uygun giyin!',
-  '⏱ Giyinmek için 60 saniyen var.',
+  '⏱ Giyinmek için 60 saniyen&apos; var.',
   '👗 Soldaki gardıroptan kıyafet seç, avatarın giyinsin.',
   '💃 Podyumda herkesin kombinini 1-5 yıldızla oyla.',
   '3 tur sonra en yüksek puan kazanır! Kendine oy veremezsin.',

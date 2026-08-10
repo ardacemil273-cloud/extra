@@ -1,6 +1,10 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
-import { PrismaService } from '../database/prisma.service';
-import { IsString, MaxLength, IsOptional, IsIn } from 'class-validator';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from "@nestjs/common";
+import { PrismaService } from "../database/prisma.service";
+import { IsString, MaxLength, IsOptional } from "class-validator";
 
 export class UpdateProfileDto {
   @IsString()
@@ -23,8 +27,17 @@ export class UpdateProfileDto {
 }
 
 const AVATAR_OPTIONS = [
-  'default', 'warrior', 'mage', 'rogue', 'vampire', 'werewolf',
-  'detective', 'doctor', 'hunter', 'ghost', 'guest',
+  "default",
+  "warrior",
+  "mage",
+  "rogue",
+  "vampire",
+  "werewolf",
+  "detective",
+  "doctor",
+  "hunter",
+  "ghost",
+  "guest",
 ];
 
 @Injectable()
@@ -45,7 +58,7 @@ export class ProfileService {
             statistics: true,
             achievements: {
               include: { achievement: true },
-              orderBy: { unlockedAt: 'desc' },
+              orderBy: { unlockedAt: "desc" },
               take: 5,
             },
           },
@@ -53,13 +66,13 @@ export class ProfileService {
       },
     });
 
-    if (!profile) throw new NotFoundException('Profil bulunamadı');
+    if (!profile) throw new NotFoundException("Profil bulunamadı");
     return profile;
   }
 
   async updateProfile(userId: string, dto: UpdateProfileDto) {
     if (dto.avatar && !AVATAR_OPTIONS.includes(dto.avatar)) {
-      throw new BadRequestException('Geçersiz avatar seçimi');
+      throw new BadRequestException("Geçersiz avatar seçimi");
     }
 
     return this.prisma.profile.update({
@@ -75,7 +88,7 @@ export class ProfileService {
 
   async getAchievements(userId: string) {
     const all = await this.prisma.achievement.findMany({
-      orderBy: [{ rarity: 'desc' }, { name: 'asc' }],
+      orderBy: [{ rarity: "desc" }, { name: "asc" }],
     });
 
     const unlocked = await this.prisma.userAchievement.findMany({
@@ -83,7 +96,9 @@ export class ProfileService {
       select: { achievementId: true, unlockedAt: true },
     });
 
-    const unlockedMap = new Map(unlocked.map((u) => [u.achievementId, u.unlockedAt]));
+    const unlockedMap = new Map(
+      unlocked.map((u) => [u.achievementId, u.unlockedAt]),
+    );
 
     return all.map((ach) => ({
       ...ach,
@@ -93,11 +108,15 @@ export class ProfileService {
   }
 
   async unlockAchievement(userId: string, key: string): Promise<boolean> {
-    const achievement = await this.prisma.achievement.findUnique({ where: { key } });
+    const achievement = await this.prisma.achievement.findUnique({
+      where: { key },
+    });
     if (!achievement) return false;
 
     const existing = await this.prisma.userAchievement.findUnique({
-      where: { userId_achievementId: { userId, achievementId: achievement.id } },
+      where: {
+        userId_achievementId: { userId, achievementId: achievement.id },
+      },
     });
 
     if (existing) return false;
@@ -109,7 +128,7 @@ export class ProfileService {
     return true;
   }
 
-getAvatarOptions() {
+  getAvatarOptions() {
     return AVATAR_OPTIONS;
   }
 
@@ -118,11 +137,19 @@ getAvatarOptions() {
     const [history, total] = await Promise.all([
       this.prisma.gameHistory.findMany({
         where: { userId },
-        orderBy: { playedAt: 'desc' },
+        orderBy: { playedAt: "desc" },
         skip,
         take: limit,
         include: {
-          match: { select: { id: true, gameType: true, duration: true, winnerTeam: true, endedAt: true } },
+          match: {
+            select: {
+              id: true,
+              gameType: true,
+              duration: true,
+              winnerTeam: true,
+              endedAt: true,
+            },
+          },
         },
       }),
       this.prisma.gameHistory.count({ where: { userId } }),

@@ -1,7 +1,7 @@
-import { io, Socket } from 'socket.io-client';
-import { getAccessToken } from './api';
+import { io, Socket } from "socket.io-client";
+import { getAccessToken } from "./api";
 
-const WS_URL = process.env.NEXT_PUBLIC_WS_URL || 'http://localhost:4000';
+const WS_URL = process.env.NEXT_PUBLIC_WS_URL || "http://localhost:4000";
 
 let roomSocket: Socket | null = null;
 let gameSocket: Socket | null = null;
@@ -15,27 +15,27 @@ function createSocket(namespace: string): Socket {
     reconnection: true,
     reconnectionAttempts: 5,
     reconnectionDelay: 1000,
-    transports: ['websocket', 'polling'],
+    transports: ["websocket", "polling"],
   });
 }
 
 export function getRoomSocket(): Socket {
   if (!roomSocket || roomSocket.disconnected) {
-    roomSocket = createSocket('/rooms');
+    roomSocket = createSocket("/rooms");
   }
   return roomSocket;
 }
 
 export function getGameSocket(): Socket {
   if (!gameSocket || gameSocket.disconnected) {
-    gameSocket = createSocket('/game');
+    gameSocket = createSocket("/game");
   }
   return gameSocket;
 }
 
 export function getVoiceSocket(): Socket {
   if (!voiceSocket || voiceSocket.disconnected) {
-    voiceSocket = createSocket('/voice');
+    voiceSocket = createSocket("/voice");
   }
   return voiceSocket;
 }

@@ -1,5 +1,5 @@
-import { create } from 'zustand';
-import { Room, ChatMessage } from '@/types';
+import { create } from "zustand";
+import { Room, ChatMessage } from "@/types";
 
 interface RoomState {
   currentRoom: Room | null;
@@ -20,7 +20,10 @@ export const useRoomStore = create<RoomState>((set) => ({
   isConnected: false,
 
   setRoom: (room) => set({ currentRoom: room }),
-  updateRoom: (partial) => set((s) => ({ currentRoom: s.currentRoom ? { ...s.currentRoom, ...partial } : null })),
+  updateRoom: (partial) =>
+    set((s) => ({
+      currentRoom: s.currentRoom ? { ...s.currentRoom, ...partial } : null,
+    })),
   addChatMessage: (msg) =>
     set((s) => ({
       chatMessages: [...s.chatMessages.slice(-99), msg],

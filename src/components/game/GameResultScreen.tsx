@@ -58,10 +58,10 @@ export default function GameResultScreen({ roomId, gameResult, allPlayers, myUse
           </div>
           <h1 className={`text-5xl font-black mb-2 ${iWon ? 'text-yellow-400' : 'text-red-400'}`}
             style={{ textShadow: iWon ? '0 0 30px rgba(245,158,11,.5)' : '0 0 30px rgba(239,68,68,.5)' }}>
-            {iWon ? 'KAZANDIN!' : 'KAYBETTİN!'}
+            {iWon ? 'KAZANDIN&apos;!' : 'KAYBETTİN&apos;!'}
           </h1>
           <div className={`inline-flex items-center gap-2 px-5 py-2 rounded-full border text-sm font-bold ${isVampireWin ? 'bg-red-500/15 border-red-500/30 text-red-300' : 'bg-purple-500/15 border-purple-500/30 text-purple-300'}`}>
-            {isVampireWin ? '🧛 Vampirler Kazandı!' : '🧑 Köylüler Kazandı!'}
+            {isVampireWin ? '🧛 Vampirler Kazandı&apos;!' : '🧑 Köylüler Kazandı&apos;!'}
           </div>
         </motion.div>
 

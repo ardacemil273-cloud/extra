@@ -23,9 +23,9 @@ const STATION_LABEL: Record<string, string> = {
 
 const RULES = [
   '🍰 Siparişleri yetiştir! 4 dakikada 15 sipariş tamamlayın.',
-  '📋 Sipariş kartları üstte gelir. Birini seç (tıkla-üstlen).',
+  '📋 Sipariş kartları üstte gelir. Birini seç (tıkla&mdash;üstlen).',
   '🔪 Ürünü hazırlamak için gereken istasyonlara tıkla (doğra/pişir/karıştır).',
-  '⏱ Her sipariş 30 saniyede süresi doluyor — kırmızıya dönünce acele et!',
+  '⏱ Her sipariş 30 saniyede süresi doluyor &mdash; kırmızıya dönünce acele et!',
   '🎯 Bu bir TAKIM oyunu — hepiniz birlikte kazanırsınız!',
 ];
 

@@ -48,7 +48,7 @@ export default function GameOverPastel({ roomId, winnerText, subtitle, emoji, na
         {narrator && (
           <motion.div initial={{ opacity:0, y:10 }} animate={{ opacity:1, y:0 }} transition={{ delay:.3 }}
             className="pastel-card rounded-2xl p-4 mb-6 text-center">
-            <p className="text-sm text-[#7a6a8a] italic">"{narrator}"</p>
+            <p className="text-sm text-[#7a6a8a] italic">{narrator}</p>
           </motion.div>
         )}
 

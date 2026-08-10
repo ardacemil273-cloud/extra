@@ -2,19 +2,18 @@ import {
   Injectable,
   ConflictException,
   UnauthorizedException,
-  BadRequestException,
   Logger,
-} from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
-import { ConfigService } from '@nestjs/config';
-import { PrismaService } from '../database/prisma.service';
-import { SocketStateService } from '../socket-state/socket-state.service';
-import * as bcrypt from 'bcryptjs';
-import { nanoid } from 'nanoid';
-import { v4 as uuidv4 } from 'uuid';
-import { AuthProvider } from '@prisma/client';
-import { RegisterDto } from './dto/register.dto';
-import { LoginDto } from './dto/login.dto';
+} from "@nestjs/common";
+import { JwtService } from "@nestjs/jwt";
+import { ConfigService } from "@nestjs/config";
+import { PrismaService } from "../database/prisma.service";
+import { SocketStateService } from "../socket-state/socket-state.service";
+import * as bcrypt from "bcryptjs";
+import { nanoid } from "nanoid";
+import { v4 as uuidv4 } from "uuid";
+import { AuthProvider } from "@prisma/client";
+import { RegisterDto } from "./dto/register.dto";
+import { LoginDto } from "./dto/login.dto";
 
 export interface AuthTokens {
   accessToken: string;
@@ -45,12 +44,14 @@ export class AuthService {
     const existingUsername = await this.prisma.user.findUnique({
       where: { username: dto.username },
     });
-    if (existingUsername) throw new ConflictException('Bu kullanıcı adı zaten kullanılıyor');
+    if (existingUsername)
+      throw new ConflictException("Bu kullanıcı adı zaten kullanılıyor");
 
     const existingEmail = await this.prisma.user.findUnique({
       where: { email: dto.email },
     });
-    if (existingEmail) throw new ConflictException('Bu e-posta adresi zaten kullanılıyor');
+    if (existingEmail)
+      throw new ConflictException("Bu e-posta adresi zaten kullanılıyor");
 
     const passwordHash = await bcrypt.hash(dto.password, 12);
 
@@ -63,7 +64,7 @@ export class AuthService {
         profile: {
           create: {
             displayName: dto.displayName || dto.username,
-            avatar: 'default',
+            avatar: "default",
           },
         },
         statistics: { create: {} },
@@ -76,20 +77,18 @@ export class AuthService {
   async login(dto: LoginDto): Promise<AuthTokens> {
     const user = await this.prisma.user.findFirst({
       where: {
-        OR: [
-          { username: dto.usernameOrEmail },
-          { email: dto.usernameOrEmail },
-        ],
+        OR: [{ username: dto.usernameOrEmail }, { email: dto.usernameOrEmail }],
         provider: AuthProvider.LOCAL,
       },
     });
 
     if (!user || !user.passwordHash) {
-      throw new UnauthorizedException('Kullanıcı adı veya şifre hatalı');
+      throw new UnauthorizedException("Kullanıcı adı veya şifre hatalı");
     }
 
     const isValid = await bcrypt.compare(dto.password, user.passwordHash);
-    if (!isValid) throw new UnauthorizedException('Kullanıcı adı veya şifre hatalı');
+    if (!isValid)
+      throw new UnauthorizedException("Kullanıcı adı veya şifre hatalı");
 
     await this.prisma.user.update({
       where: { id: user.id },
@@ -111,7 +110,7 @@ export class AuthService {
         profile: {
           create: {
             displayName: guestUsername,
-            avatar: 'guest',
+            avatar: "guest",
           },
         },
         statistics: { create: {} },
@@ -163,7 +162,9 @@ export class AuthService {
     });
 
     if (!storedToken || storedToken.expiresAt < new Date()) {
-      throw new UnauthorizedException('Refresh token geçersiz veya süresi dolmuş');
+      throw new UnauthorizedException(
+        "Refresh token geçersiz veya süresi dolmuş",
+      );
     }
 
     await this.prisma.refreshToken.delete({ where: { token: refreshToken } });
@@ -196,8 +197,8 @@ export class AuthService {
     const payload = { sub: userId, username, isGuest };
 
     const accessToken = this.jwtService.sign(payload, {
-      secret: this.config.get<string>('auth.jwtSecret'),
-      expiresIn: this.config.get<string>('auth.jwtExpires'),
+      secret: this.config.get<string>("auth.jwtSecret"),
+      expiresIn: this.config.get<string>("auth.jwtExpires"),
     });
 
     const refreshTokenValue = uuidv4();
@@ -217,8 +218,8 @@ export class AuthService {
 
   private sanitizeUsername(name: string): string {
     return name
-      .replace(/[^a-zA-Z0-9_]/g, '_')
-      .replace(/_{2,}/g, '_')
+      .replace(/[^a-zA-Z0-9_]/g, "_")
+      .replace(/_{2,}/g, "_")
       .substring(0, 18);
   }
 

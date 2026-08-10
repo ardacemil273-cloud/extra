@@ -1,7 +1,7 @@
-import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../database/prisma.service';
-import { NotificationType } from '@prisma/client';
-import { EventEmitter2 } from '@nestjs/event-emitter';
+import { Injectable } from "@nestjs/common";
+import { PrismaService } from "../database/prisma.service";
+import { NotificationType } from "@prisma/client";
+import { EventEmitter2 } from "@nestjs/event-emitter";
 
 export interface CreateNotificationDto {
   recipientId: string;
@@ -31,12 +31,16 @@ export class NotificationsService {
       },
       include: {
         sender: {
-          select: { id: true, username: true, profile: { select: { displayName: true, avatar: true } } },
+          select: {
+            id: true,
+            username: true,
+            profile: { select: { displayName: true, avatar: true } },
+          },
         },
       },
     });
 
-    this.eventEmitter.emit('notification.created', {
+    this.eventEmitter.emit("notification.created", {
       userId: dto.recipientId,
       notification,
     });
@@ -52,15 +56,21 @@ export class NotificationsService {
         where: { recipientId: userId },
         include: {
           sender: {
-            select: { id: true, username: true, profile: { select: { displayName: true, avatar: true } } },
+            select: {
+              id: true,
+              username: true,
+              profile: { select: { displayName: true, avatar: true } },
+            },
           },
         },
-        orderBy: { createdAt: 'desc' },
+        orderBy: { createdAt: "desc" },
         skip,
         take: limit,
       }),
       this.prisma.notification.count({ where: { recipientId: userId } }),
-      this.prisma.notification.count({ where: { recipientId: userId, isRead: false } }),
+      this.prisma.notification.count({
+        where: { recipientId: userId, isRead: false },
+      }),
     ]);
 
     return { notifications, total, unreadCount, page, limit };

@@ -1,8 +1,8 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
-import { PassportStrategy } from '@nestjs/passport';
-import { ExtractJwt, Strategy } from 'passport-jwt';
-import { ConfigService } from '@nestjs/config';
-import { PrismaService } from '../../database/prisma.service';
+import { Injectable, UnauthorizedException } from "@nestjs/common";
+import { PassportStrategy } from "@nestjs/passport";
+import { ExtractJwt, Strategy } from "passport-jwt";
+import { ConfigService } from "@nestjs/config";
+import { PrismaService } from "../../database/prisma.service";
 
 export interface JwtPayload {
   sub: string;
@@ -21,17 +21,23 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      secretOrKey: config.get<string>('auth.jwtSecret'),
+      secretOrKey: config.get<string>("auth.jwtSecret"),
     });
   }
 
   async validate(payload: JwtPayload) {
     const user = await this.prisma.user.findUnique({
       where: { id: payload.sub },
-      select: { id: true, username: true, email: true, isGuest: true, provider: true },
+      select: {
+        id: true,
+        username: true,
+        email: true,
+        isGuest: true,
+        provider: true,
+      },
     });
 
-    if (!user) throw new UnauthorizedException('Token geçersiz');
+    if (!user) throw new UnauthorizedException("Token geçersiz");
     return user;
   }
 }

@@ -1,7 +1,12 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { GameState, GamePlayer, GamePhase, GameTimer } from './interfaces/game.interfaces';
-import { EventEmitter2 } from '@nestjs/event-emitter';
-import { v4 as uuidv4 } from 'uuid';
+import { Injectable, Logger } from "@nestjs/common";
+import {
+  GameState,
+  GamePlayer,
+  GamePhase,
+  GameTimer,
+} from "./interfaces/game.interfaces";
+import { EventEmitter2 } from "@nestjs/event-emitter";
+import { v4 as uuidv4 } from "uuid";
 
 @Injectable()
 export class GameEngineService {
@@ -10,17 +15,26 @@ export class GameEngineService {
 
   constructor(private readonly eventEmitter: EventEmitter2) {}
 
-  createGameState(roomId: string, gameType: string, players: GamePlayer[]): GameState {
+  createGameState(
+    roomId: string,
+    gameType: string,
+    players: GamePlayer[],
+  ): GameState {
     const playersMap: Record<string, GamePlayer> = {};
     for (const p of players) {
-      playersMap[p.userId] = { ...p, votes: 0, votedFor: null, actionDone: false };
+      playersMap[p.userId] = {
+        ...p,
+        votes: 0,
+        votedFor: null,
+        actionDone: false,
+      };
     }
 
     const state: GameState = {
       id: uuidv4(),
       roomId,
       gameType,
-      phase: 'LOBBY',
+      phase: "LOBBY",
       round: 0,
       players: playersMap,
       events: [],
@@ -62,7 +76,15 @@ export class GameEngineService {
   }
 
   setPhase(roomId: string, phase: GamePhase): GameState | null {
-    return this.updateState(roomId, (s) => ({ ...s, phase, votes: [], events: [...s.events, { type: 'PHASE_CHANGE', payload: { phase }, timestamp: Date.now() }] }));
+    return this.updateState(roomId, (s) => ({
+      ...s,
+      phase,
+      votes: [],
+      events: [
+        ...s.events,
+        { type: "PHASE_CHANGE", payload: { phase }, timestamp: Date.now() },
+      ],
+    }));
   }
 
   startTimer(roomId: string, duration: number): void {
@@ -74,32 +96,46 @@ export class GameEngineService {
     };
 
     this.updateState(roomId, (s) => ({ ...s, timer }));
-    this.eventEmitter.emit('game.timer.started', { roomId, timer });
+    this.eventEmitter.emit("game.timer.started", { roomId, timer });
   }
 
   clearTimer(roomId: string): void {
     this.updateState(roomId, (s) => ({ ...s, timer: null }));
   }
 
-  addEvent(roomId: string, type: string, payload: Record<string, unknown>): void {
+  addEvent(
+    roomId: string,
+    type: string,
+    payload: Record<string, unknown>,
+  ): void {
     this.updateState(roomId, (s) => ({
       ...s,
-      events: [...s.events.slice(-50), { type, payload, timestamp: Date.now() }],
+      events: [
+        ...s.events.slice(-50),
+        { type, payload, timestamp: Date.now() },
+      ],
     }));
   }
 
-  castVote(roomId: string, voterId: string, targetId: string): GameState | null {
+  castVote(
+    roomId: string,
+    voterId: string,
+    targetId: string,
+  ): GameState | null {
     return this.updateState(roomId, (s) => {
       // 🔒 SERVER AUTHORITATIVE: Oylama sadece DAY_VOTING fazında, hayattaki oyuncular tarafından ve kendine oy verilmeden yapılabilir
-      if (s.phase !== 'DAY_VOTING') return s;
+      if (s.phase !== "DAY_VOTING") return s;
       const voter = s.players[voterId];
       const target = s.players[targetId];
-      if (!voter || voter.status !== 'ALIVE') return s;
-      if (!target || target.status !== 'ALIVE') return s;
+      if (!voter || voter.status !== "ALIVE") return s;
+      if (!target || target.status !== "ALIVE") return s;
       if (voterId === targetId) return s;
 
       const filteredVotes = s.votes.filter((v) => v.voterId !== voterId);
-      const newVotes = [...filteredVotes, { voterId, targetId, timestamp: Date.now() }];
+      const newVotes = [
+        ...filteredVotes,
+        { voterId, targetId, timestamp: Date.now() },
+      ];
 
       const updatedPlayers = { ...s.players };
       for (const p of Object.values(updatedPlayers)) {
@@ -108,8 +144,10 @@ export class GameEngineService {
       }
 
       for (const vote of newVotes) {
-        if (updatedPlayers[vote.voterId]) updatedPlayers[vote.voterId].votedFor = vote.targetId;
-        if (updatedPlayers[vote.targetId]) updatedPlayers[vote.targetId].votes++;
+        if (updatedPlayers[vote.voterId])
+          updatedPlayers[vote.voterId].votedFor = vote.targetId;
+        if (updatedPlayers[vote.targetId])
+          updatedPlayers[vote.targetId].votes++;
       }
 
       return { ...s, votes: newVotes, players: updatedPlayers };
@@ -119,17 +157,25 @@ export class GameEngineService {
   eliminatePlayer(roomId: string, userId: string): GameState | null {
     return this.updateState(roomId, (s) => {
       const players = { ...s.players };
-      if (players[userId]) players[userId] = { ...players[userId], status: 'DEAD' };
+      if (players[userId])
+        players[userId] = { ...players[userId], status: "DEAD" };
       return { ...s, players };
     });
   }
 
-  assignRoles(roomId: string, roleMap: Record<string, { role: string; team: string }>): GameState | null {
+  assignRoles(
+    roomId: string,
+    roleMap: Record<string, { role: string; team: string }>,
+  ): GameState | null {
     return this.updateState(roomId, (s) => {
       const players = { ...s.players };
       for (const [userId, roleData] of Object.entries(roleMap)) {
         if (players[userId]) {
-          players[userId] = { ...players[userId], role: roleData.role, team: roleData.team };
+          players[userId] = {
+            ...players[userId],
+            role: roleData.role,
+            team: roleData.team,
+          };
         }
       }
       return { ...s, players };
@@ -137,7 +183,7 @@ export class GameEngineService {
   }
 
   getAlivePlayers(state: GameState): GamePlayer[] {
-    return Object.values(state.players).filter((p) => p.status === 'ALIVE');
+    return Object.values(state.players).filter((p) => p.status === "ALIVE");
   }
 
   getVoteResults(state: GameState): Array<{ userId: string; votes: number }> {

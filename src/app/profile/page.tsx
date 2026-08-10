@@ -31,24 +31,25 @@ export default function ProfilePage() {
 
   useEffect(() => {
     if (!isAuthenticated) { router.push('/login'); return; }
+
+    const loadData = async () => {
+      try {
+        const [achRes, friendsRes] = await Promise.all([
+          api.get('/profile/me/achievements'),
+          api.get('/friends'),
+        ]);
+        setAchievements(achRes.data.data || achRes.data);
+        setFriends(friendsRes.data.data || friendsRes.data);
+      } catch {}
+    };
+
     loadData();
     if (user?.profile) setForm({
       displayName: user.profile.displayName,
       bio: user.profile.bio || '',
       avatar: user.profile.avatar || 'default',
     });
-  }, [isAuthenticated]);
-
-  const loadData = async () => {
-    try {
-      const [achRes, friendsRes] = await Promise.all([
-        api.get('/profile/me/achievements'),
-        api.get('/friends'),
-      ]);
-      setAchievements(achRes.data.data || achRes.data);
-      setFriends(friendsRes.data.data || friendsRes.data);
-    } catch {}
-  };
+  }, [isAuthenticated, router, user?.profile]);
 
   const loadHistory = async () => {
     try {
